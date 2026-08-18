@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block mobile_title %}Dashboard{% endblock %}
+{% block extra_css %}
+<style>
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --info-color: #0dcaf0;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --secondary-color: #6c757d;
+}
+
+.dashboard-wrapper {
+    background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
+    min-height: 100vh;
+    padding: 2rem 0 3rem;
+    position: relative;
+}
+
+.dashboard-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(102, 126, 234, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(118, 75, 162, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(240, 147, 251, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dashboard-wrapper > .container {
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem 0;
+}
+
+.dashboard-header h1 {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #212529;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.dashboard-header p {
+    font-size: clamp(0.9375rem, 2vw, 1.125rem);
+    color: #6c757d;
+    margin: 0;
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.dashboard-card {
+    border: none;
+    border-radius: 12px;
+    padding: 1.125rem 0.75rem;
+    min-height: 120px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid #e9ecef;
+}
+
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--card-color);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+    z-index: 1;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: var(--card-color);
+}
+
+.dashboard-card:hover::before {
+    transform: scaleX(1);
+}
+
+.dashboard-card .icon-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+    background-color: var(--card-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.dashboard-card:hover .icon-circle {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.dashboard-card .icon-circle i {
+    font-size: 1.05rem;
+    color: white;
+    animation: iconFloat 3s ease-in-out infinite;
+    filter: brightness(1.1);
+}
+
+@keyframes iconFloat {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+.dashboard-card:hover .icon-circle i {
+    animation: iconPulse 0.6s ease-in-out;
+}
+
+@keyframes iconPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+.dashboard-card h5 {
+    font-size: clamp(0.875rem, 1.8vw, 1rem);
+    font-weight: 600;
+    margin-bottom: 0.375rem;
+    color: #212529;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+}
+
+.dashboard-card:hover h5 {
+    color: var(--card-color);
+}
+
+.dashboard-card p {
+    font-size: clamp(0.75rem, 1.35vw, 0.875rem);
+    color: #6c757d;
+    line-height: 1.6;
+    margin: 0;
+    position: relative;
+    z-index: 2;
+    font-weight: 400;
+}
+
+/* Card icon colors – brighter shades for better visual feel */
+.card-blue {
+    --card-color: #2563eb; /* Blue */
+}
+
+.card-green {
+    --card-color: #10b981; /* Green */
+}
+
+.card-cyan {
+    --card-color: #06b6d4; /* Cyan */
+}
+
+.card-yellow {
+    --card-color: #f59e0b; /* Amber */
+}
+
+.card-red {
+    --card-color: #ef4444; /* Red */
+}
+
+.card-purple {
+    --card-color: #8b5cf6; /* Purple */
+}
+
+.card-orange {
+    --card-color: #f97316; /* Orange */
+}
+
+.card-teal {
+    --card-color: #14b8a6; /* Teal */
+}
+
+.card-indigo {
+    --card-color: #6366f1; /* Indigo */
+}
+
+.card-pink {
+    --card-color: #ec4899; /* Pink */
+}
+
+.card-emerald {
+    --card-color: #34d399; /* Emerald */
+}
+
+/* Mobile responsive - Compact design */
+@media (max-width: 576px) {
+    .dashboard-wrapper {
+        padding: 1rem 0 1.5rem;
+    }
+    
+    .dashboard-header {
+        margin-bottom: 1.25rem;
+        padding: 1rem 0;
+    }
+    
+    .dashboard-card {
+        padding: 0.675rem 0.5rem;
+        min-height: 97.5px;
+        border-radius: 14px;
+    }
+    
+    .dashboard-card .icon-circle {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 0.5rem;
+        border-radius: 14px;
+    }
+    
+    .dashboard-card .icon-circle i {
+        font-size: 0.9rem;
+    }
+    
+    .dashboard-card h5 {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+        line-height: 1.4;
+    }
+    
+    .dashboard-card p {
+        font-size: 0.6875rem;
+        line-height: 1.5;
+        font-weight: 400;
+    }
+}
+
+@media (min-width: 577px) and (max-width: 768px) {
+    .dashboard-card {
+        min-height: 123.75px;
+    }
+    
+    .dashboard-card .icon-circle {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .dashboard-card .icon-circle i {
+        font-size: 1.125rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .dashboard-card {
+        padding: 1.05rem 0.825rem;
+        min-height: 127.5px;
+    }
+    
+    .dashboard-card .icon-circle {
+        width: 48.75px;
+        height: 48.75px;
+    }
+    
+    .dashboard-card .icon-circle i {
+        font-size: 1.2375rem;
+    }
+}
+
+/* Animation for cards on load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-card {
+    animation: fadeInUp 0.6s ease forwards;
+    opacity: 0;
+}
+
+.dashboard-card:nth-child(1) { animation-delay: 0.1s; }
+.dashboard-card:nth-child(2) { animation-delay: 0.2s; }
+.dashboard-card:nth-child(3) { animation-delay: 0.3s; }
+.dashboard-card:nth-child(4) { animation-delay: 0.4s; }
+.dashboard-card:nth-child(5) { animation-delay: 0.5s; }
+.dashboard-card:nth-child(6) { animation-delay: 0.6s; }
+.dashboard-card:nth-child(7) { animation-delay: 0.7s; }
+.dashboard-card:nth-child(8) { animation-delay: 0.8s; }
+.dashboard-card:nth-child(9) { animation-delay: 0.9s; }
+.dashboard-card:nth-child(10) { animation-delay: 1s; }
+.dashboard-card:nth-child(11) { animation-delay: 1.1s; }
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Focus states for accessibility */
+.dashboard-card:focus {
+    outline: 3px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .dashboard-wrapper {
+        background: white;
+    }
+    
+    .dashboard-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Main Dashboard</h1>
+            <p>Welcome, {{ current_user.full_name }}! 👋 Select a module to get started.</p>
+        </div>
+
+    {% set is_officer = 'officer' in parse_roles(current_user.role) %}
+    {% set is_teaching_assistant = 'teaching_assistant' in parse_roles(current_user.role) %}
+    {% set is_teacher = 'teacher' in parse_roles(current_user.role) and not is_teaching_assistant and not is_officer %}
+    {% set is_head = 'head' in parse_roles(current_user.role) or 'dean' in parse_roles(current_user.role) %}
+    {% set oc = officer_cards if officer_cards is defined else {} %}
+    
+    {% set cards = [
+        {
+            'title': 'Class Management',
+            'desc': 'Manage sessions, students, and attendance for your classes.',
+            'icon': 'fas fa-chalkboard-teacher',
+            'color_class': 'card-blue',
+            'url': url_for('class_management.index'),
+            'show': not is_teaching_assistant and not is_officer
+        },
+        {
+            'title': 'Result Management',
+            'desc': 'Handle student results, subjects, marks, and generate reports.',
+            'icon': 'fas fa-poll',
+            'color_class': 'card-orange',
+            'url': url_for('result_management.index'),
+            'show': (is_head or is_tabulator()) and not is_teaching_assistant and not is_officer
+        },
+        {
+            'title': 'Routine Management',
+            'desc': 'Create and manage class schedules and teacher assignments.',
+            'icon': 'fas fa-calendar-alt',
+            'color_class': 'card-cyan',
+            'url': url_for('routine_management.index'),
+            'show': is_teaching_assistant or (not is_officer)
+        },
+        {
+            'title': 'Exam Paper Evaluation',
+            'desc': 'Submit subject information for exam paper evaluation workflow.',
+            'icon': 'fas fa-file-alt',
+            'color_class': 'card-yellow',
+            'url': url_for('exam_evaluation'),
+            'show': not is_teaching_assistant and not is_officer
+        },
+        {
+            'title': 'Students Management',
+            'desc': 'Manage student information, batch, and contact details.',
+            'icon': 'fas fa-users',
+            'color_class': 'card-red',
+            'url': url_for('student_management.index'),
+            'show': (is_teaching_assistant or not is_teacher) and not is_officer
+        },
+        {
+            'title': 'Curriculum Management',
+            'desc': 'Create curricula, add courses, and organize academic programs.',
+            'icon': 'fas fa-book',
+            'color_class': 'card-purple',
+            'url': url_for('course_management.index'),
+            'show': (is_teaching_assistant or not is_teacher) and not is_officer
+        },
+        {
+            'title': 'Remuneration',
+            'desc': 'Manage remuneration and payment information.',
+            'icon': 'fas fa-money-bill-wave',
+            'color_class': 'card-green',
+            'url': url_for('remuneration_portal'),
+            'show': (not is_teaching_assistant and not is_officer) or (is_officer and oc.get('remuneration', true))
+        },
+        {
+            'title': 'Academic Calendar',
+            'desc': 'View academic calendar with holidays, events, and important dates.',
+            'icon': 'fas fa-calendar',
+            'color_class': 'card-indigo',
+            'url': url_for('academic_calendar.index'),
+            'show': (not is_officer) or oc.get('academic_calendar', true)
+        },
+        {
+            'title': 'Exam Info',
+            'desc': 'View and manage examination information and schedules.',
+            'icon': 'fas fa-clipboard-list',
+            'color_class': 'card-orange',
+            'url': url_for('officer_exam_info'),
+            'show': is_officer and not is_teaching_assistant and oc.get('exam_info', true)
+        },
+        {
+            'title': 'Class Routine',
+            'desc': 'View published class schedules (view only).',
+            'icon': 'fas fa-calendar-check',
+            'color_class': 'card-cyan',
+            'url': url_for('routine_management.public_routines'),
+            'show': is_officer and not is_teaching_assistant and oc.get('class_routine', true)
+        }
+    ] %}
+    {% if show_course_registration_review %}
+        {% set cards = cards + [
+            {
+                'title': 'Course Registration',
+                'desc': 'Review and finalize registrations for your assigned batches.',
+                'icon': 'fas fa-clipboard-check',
+                'color_class': 'card-cyan',
+                'url': url_for('course_management.coordinator_registrations'),
+                'show': not is_teaching_assistant
+            }
+        ] %}
+    {% endif %}
+    {% if is_exam_committee_chief() or is_exam_committee_member() %}
+        {% set cards = cards + [
+            {
+                'title': 'Exam Committee Management',
+                'desc': 'Monitor submitted courses, assign scrutinizers, and manage remuneration statements.',
+                'icon': 'fas fa-gavel',
+                'color_class': 'card-red',
+                'url': url_for('exam_committee_management'),
+                'show': not is_teaching_assistant
+            }
+        ] %}
+    {% endif %}
+    {% if tenant.features.get('curriculator', true) %}
+    {% set cards = cards + [
+        {
+            'title': 'Curriculator',
+            'desc': 'Collaboratively develop syllabus (Part A–D) and download DOCX/PDF.',
+            'icon': 'fas fa-book-open',
+            'color_class': 'card-indigo',
+            'url': url_for('curriculator.index'),
+            'show': is_teaching_assistant or not is_officer
+        }
+    ] %}
+    {% endif %}
+    {% if show_leave_application|default(false) %}
+    {% set _ = cards.append({
+        'title': 'Leave Application',
+        'desc': 'Fill out four types of leave applications and download in official PDF format.',
+        'icon': 'fas fa-file-signature',
+        'color_class': 'card-purple',
+        'url': url_for('leave_application.index'),
+        'show': true
+    }) %}
+    {% endif %}
+    {% if show_self_assessment|default(false) %}
+    {% set _ = cards.append({
+        'title': 'Self Assessment',
+        'desc': 'PSAC Committee – Alumni, Employer, Faculty, Non-Academic Staff, and Student surveys.',
+        'icon': 'fas fa-clipboard-check',
+        'color_class': 'card-green',
+        'url': url_for('self_assessment.index'),
+        'show': true
+    }) %}
+    {% endif %}
+    {% if show_admission_exam|default(false) %}
+    {% set _ = cards.append({
+        'title': 'Admission Exam',
+        'desc': 'Masters admission – applications, Rocket payment verification, rolls, and admit cards.',
+        'icon': 'fas fa-id-card',
+        'color_class': 'card-orange',
+        'url': url_for('admission_exam.index'),
+        'show': true
+    }) %}
+    {% endif %}
+    {% if show_noticeboard|default(false) %}
+    {% set _ = cards.append({
+        'title': 'Noticeboard',
+        'desc': 'Post notices for your course students; download PDF copies.',
+        'icon': 'fas fa-thumbtack',
+        'color_class': 'card-orange',
+        'url': url_for('noticeboard.index'),
+        'show': not is_teaching_assistant and not is_officer
+    }) %}
+    {% endif %}
+
+    <div class="row g-3 g-md-4">
+        {% for card in cards if card.show %}
+        <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-3">
+            <a href="{{ card.url }}" class="text-decoration-none" aria-label="{{ card.title }}">
+                <div class="dashboard-card text-center h-100 {{ card.color_class }}">
+                    <div class="icon-circle">
+                        <i class="{{ card.icon }}"></i>
+                    </div>
+                    <h5 class="mb-1">{{ card.title }}</h5>
+                    <p class="text-muted small mb-0">{{ card.desc }}</p>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+</div>
+{% endblock %}

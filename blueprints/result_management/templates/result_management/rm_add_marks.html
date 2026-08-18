@@ -1,0 +1,687 @@
+{% extends "base.html" %}
+
+{% block mobile_title %}Add Marks{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none">Sessions</a></li>
+<li class="breadcrumb-item active">Add Marks</li>
+{% endblock %}
+
+{% block content %}
+<style>
+    .marks-input {
+        width: 120px !important;
+        margin: auto;
+        text-align: center;
+    }
+    .total-marks-cell, .grade-cell {
+        font-weight: 500;
+        vertical-align: middle;
+    }
+    .remarks-cell {
+        vertical-align: middle;
+    }
+</style>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Add/Edit Marks for {{ session.name }}</h2>
+        <a href="{{ url_for('result_management.index') }}" class="btn btn-secondary">Back to Sessions</a>
+        </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" id="subject-select-form">
+                <div class="input-group">
+                    <select class="form-select" name="subject_id" onchange="document.getElementById('subject-select-form').submit();">
+                        <option value="">-- Select a Subject --</option>
+            {% for subject in subjects %}
+                            <option value="{{ subject.id }}" {% if selected_subject and selected_subject.id == subject.id %}selected{% endif %}>
+                                {{ subject.name }} ({{ subject.code }})
+                </option>
+            {% endfor %}
+        </select>
+                </div>
+    </form>
+        </div>
+    </div>
+
+    {% if selected_subject %}
+    <form method="POST" action="{{ url_for('result_management.add_marks', session_id=session.id) }}">
+        <input type="hidden" name="subject_id" value="{{ selected_subject.id }}">
+        {% if selected_subject.subject_type == 'Dissertation' %}
+        <input type="hidden" name="dissertation_type" value="{{ selected_subject.dissertation_type }}">
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="mb-0">Marks for: <strong>{{ selected_subject.name }}</strong></h4>
+                <small id="saveStatus" class="text-muted" style="display: none;">
+                    <i class="fas fa-circle" id="saveStatusIcon"></i>
+                    <span id="saveStatusText"></span>
+                </small>
+            </div>
+            <button type="button" class="btn btn-info" id="refreshMarksBtn" data-subject-id="{{ selected_subject.id }}">
+                <i class="fas fa-sync-alt me-2"></i>Refresh Marks from Sources
+            </button>
+        </div>
+        
+        <div class="table-responsive m-table-scroll-sticky">
+            <table class="table table-bordered table-hover table-striped align-middle">
+                <thead class="table-dark">
+                <tr>
+                        <th class="text-start" style="width: 15%;">Student ID</th>
+                        <th class="text-start" style="width: 25%;">Name</th>
+                        {% if selected_subject.subject_type in ['Theory', 'Theory (PG)'] %}
+                            {% set pg = academic_rules.results.theory_pg %}
+                            <th>Attendance ({{ pg.attendance }})</th>
+                            <th>Continuous Assessment ({{ pg.ca }})</th>
+                            <th>Section A ({{ pg.part_a }})</th>
+                            <th>Section B ({{ pg.part_b }})</th>
+                        {% elif selected_subject.subject_type == 'Theory (UG)' %}
+                            {% set ug = academic_rules.results.theory_ug %}
+                            <th>Attendance ({{ ug.attendance }})</th>
+                            <th>Continuous Assessment ({{ ug.ca }})</th>
+                            <th>Part A ({{ ug.part_a }})</th>
+                            <th>Part B ({{ ug.part_b }})</th>
+                        {% elif selected_subject.subject_type == 'Sessional' %}
+                            {% set s = academic_rules.results.sessional %}
+                            <th>Attendance ({{ s.attendance }})</th>
+                            <th>Sessional Report ({{ s.report }})</th>
+                            <th>Sessional Viva ({{ s.viva }})</th>
+                        {% elif selected_subject.subject_type in ['Thesis (UG)', 'Thesis I (UG)', 'Thesis II (UG)'] %}
+                            {% set th = academic_rules.results.thesis_ug %}
+                            <th>Contact ({{ th.contact }})</th>
+                            <th>Thesis Evaluation ({{ th.evaluation }})</th>
+                            <th>Presentation ({{ th.presentation }})</th>
+                        {% elif selected_subject.subject_type == 'Dissertation' and selected_subject.dissertation_type == 'Type1' %}
+                            {% set d1 = academic_rules.results.dissertation_proposal %}
+                            <th>Supervisor Assessment ({{ d1.supervisor }})</th>
+                            <th>Proposal Presentation ({{ d1.presentation }})</th>
+                        {% elif selected_subject.subject_type == 'Dissertation' and selected_subject.dissertation_type == 'Type2' %}
+                            {% set d2 = academic_rules.results.dissertation_defence %}
+                            <th>Supervisor Assessment ({{ d2.supervisor }})</th>
+                            <th>Project Report ({{ d2.report }})</th>
+                            <th>Defense ({{ d2.defense }})</th>
+                        {% elif selected_subject.subject_type == 'Viva' %}
+                            <th>Viva ({{ academic_rules.results.viva.viva }})</th>
+                        {% endif %}
+                    <th>Total Marks</th>
+                    <th>Grade</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+                <tbody class="text-center">
+                    {% for student in students %}
+                    {% set mark = marks_data.get(student.id) %}
+                    {% set registration = registrations_data.get(student.id) %}
+                    {% set is_retake = (registration and registration.get('is_retake')) or (mark and mark.is_retake) %}
+                    <tr data-student-id="{{ student.id }}" data-is-retake="{{ 1 if is_retake else 0 }}">
+                        <td class="text-start">{{ student.student_id }}</td>
+                        <td class="text-start">{{ student.name }}</td>
+                        
+                        {% if selected_subject.subject_type in ['Theory', 'Theory (PG)', 'Theory (UG)'] %}
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <input type="number" step="1" class="form-control marks-input attendance-input" name="attendance_{{ student.id }}" value="{{ (mark.attendance|round(0)|int) if mark and mark.attendance is not none else '' }}" data-student-id="{{ student.id }}">
+                                    {% if mark and mark.attendance_manual %}
+                                        <span class="badge bg-info manual-badge" id="manual-badge-{{ student.id }}">Manual</span>
+                                    {% else %}
+                                        <span class="badge bg-info manual-badge" id="manual-badge-{{ student.id }}" style="display: none;">Manual</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td><input type="number" step="1" class="form-control marks-input" name="continuous_assessment_{{ student.id }}" value="{{ (mark.continuous_assessment|round(0)|int) if mark and mark.continuous_assessment is not none else '' }}"></td>
+                            <td><input type="number" step="1" class="form-control marks-input" name="part_a_{{ student.id }}" value="{{ (mark.part_a|round(0)|int) if mark and mark.part_a is not none else '' }}"></td>
+                            <td><input type="number" step="1" class="form-control marks-input" name="part_b_{{ student.id }}" value="{{ (mark.part_b|round(0)|int) if mark and mark.part_b is not none else '' }}"></td>
+                        {% elif selected_subject.subject_type == 'Sessional' %}
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <input type="number" step="0.1" class="form-control marks-input attendance-input" name="attendance_{{ student.id }}" value="{{ mark.attendance if mark and mark.attendance is not none else '' }}" data-student-id="{{ student.id }}">
+                                    {% if mark and mark.attendance_manual %}
+                                        <span class="badge bg-info manual-badge" id="manual-badge-{{ student.id }}">Manual</span>
+                                    {% else %}
+                                        <span class="badge bg-info manual-badge" id="manual-badge-{{ student.id }}" style="display: none;">Manual</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="sessional_report_{{ student.id }}" value="{{ mark.sessional_report if mark and mark.sessional_report is not none else '' }}"></td>
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="sessional_viva_{{ student.id }}" value="{{ mark.sessional_viva if mark and mark.sessional_viva is not none else '' }}"></td>
+                        {% elif selected_subject.subject_type in ['Thesis (UG)', 'Thesis I (UG)', 'Thesis II (UG)'] %}
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <input type="number" step="0.1" class="form-control marks-input attendance-input" name="attendance_{{ student.id }}" value="{{ mark.attendance if mark and mark.attendance is not none else '' }}" data-student-id="{{ student.id }}">
+                                    {% if mark and mark.attendance_manual %}
+                                        <span class="badge bg-info manual-badge" id="manual-badge-{{ student.id }}">Manual</span>
+                                    {% else %}
+                                        <span class="badge bg-info manual-badge" id="manual-badge-{{ student.id }}" style="display: none;">Manual</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="thesis_evaluation_{{ student.id }}" value="{{ mark.thesis_evaluation if mark and mark.thesis_evaluation is not none else '' }}"></td>
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="presentation_{{ student.id }}" value="{{ mark.presentation if mark and mark.presentation is not none else '' }}"></td>
+                        {% elif selected_subject.subject_type == 'Dissertation' and selected_subject.dissertation_type == 'Type1' %}
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="supervisor_assessment_{{ student.id }}" value="{{ mark.supervisor_assessment if mark and mark.supervisor_assessment is not none else '' }}"></td>
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="proposal_presentation_{{ student.id }}" value="{{ mark.proposal_presentation if mark and mark.proposal_presentation is not none else '' }}"></td>
+                        {% elif selected_subject.subject_type == 'Dissertation' and selected_subject.dissertation_type == 'Type2' %}
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="supervisor_assessment_{{ student.id }}" value="{{ mark.supervisor_assessment if mark and mark.supervisor_assessment is not none else '' }}"></td>
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="project_report_{{ student.id }}" value="{{ mark.project_report if mark and mark.project_report is not none else '' }}"></td>
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="defense_{{ student.id }}" value="{{ mark.defense if mark and mark.defense is not none else '' }}"></td>
+                        {% elif selected_subject.subject_type == 'Viva' %}
+                            <td><input type="number" step="0.1" class="form-control marks-input" name="viva_{{ student.id }}" value="{{ mark.viva if mark and mark.viva is not none else '' }}"></td>
+                        {% endif %}
+
+                        <td class="total-marks-cell fw-bold"></td>
+                        <td class="grade-cell"></td>
+                        <td class="remarks-cell">
+                            {% if is_retake %}
+                                <span class="badge bg-warning text-dark">Retake</span>
+                            {% endif %}
+                        </td>
+                        <input type="hidden" class="total-marks-input" name="student_{{ student.id }}_total_marks" value="{{ mark.total_marks if mark and mark.total_marks is not none else '' }}">
+                        {% if is_retake %}
+                        <input type="hidden" name="student_{{ student.id }}_is_retake" value="on">
+                        {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Save Marks</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Functions to calculate grades and update rows
+    function calculateGradeJS(total, isRetake) {
+        const bands = {{ academic_rules.grades.bands|tojson }};
+        const stepDown = {{ academic_rules.grades.retake_step_down|tojson }};
+        let grade_point = 0.0;
+        let grade_letter = 'F';
+        for (const band of bands) {
+            if (total >= band.min) {
+                grade_point = band.point;
+                grade_letter = band.letter;
+                break;
+            }
+        }
+        if (isRetake && stepDown && grade_letter !== 'F') {
+            const letters = bands.map(b => b.letter);
+            const idx = letters.indexOf(grade_letter);
+            if (idx >= 0 && idx + 1 < bands.length) {
+                grade_point = bands[idx + 1].point;
+                grade_letter = bands[idx + 1].letter;
+            } else {
+                grade_point = 0.0;
+                grade_letter = 'F';
+            }
+        }
+        return { grade_point, grade_letter };
+    }
+
+    function roundMarkValue(value) {
+        if (value === null || value === undefined || value === '') {
+            return '';
+        }
+        const parsed = parseFloat(value);
+        if (isNaN(parsed)) {
+            return '';
+        }
+        return String(Math.round(parsed));
+    }
+
+    function updateRow(row) {
+        try {
+            if (!row) {
+                return;
+            }
+            
+            const isRetake = row.dataset.isRetake === '1';
+            let total = 0;
+            
+            // Find all marks input fields in this row
+            const marksInputs = row.querySelectorAll('.marks-input');
+            
+            // Calculate total from all marks inputs
+            marksInputs.forEach(input => {
+                if (input && input.value !== null && input.value !== undefined && input.value !== '') {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value) && value >= 0) {
+                        total += Math.round(value);
+                    }
+                }
+            });
+
+            const grade = calculateGradeJS(total, isRetake);
+
+            // Update total marks cell
+            const totalMarksCell = row.querySelector('.total-marks-cell');
+            if (totalMarksCell) {
+                totalMarksCell.textContent = Math.round(total);
+            }
+            
+            // Update hidden total marks input
+            const totalMarksInput = row.querySelector('.total-marks-input');
+            if (totalMarksInput) {
+                totalMarksInput.value = Math.round(total);
+            }
+            
+            // Update grade cell
+            const gradeCell = row.querySelector('.grade-cell');
+            if (gradeCell) {
+                gradeCell.textContent = `${grade.grade_letter} (${grade.grade_point.toFixed(2)})`;
+            }
+            
+            // Update remarks cell
+            const remarksCell = row.querySelector('.remarks-cell');
+            if (remarksCell) {
+                remarksCell.innerHTML = '';
+                if (isRetake) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-warning text-dark';
+                    badge.textContent = 'Retake';
+                    remarksCell.appendChild(badge);
+                }
+            }
+        } catch (error) {
+            console.error('Error updating row:', error);
+        }
+    }
+
+    function roundTheoryInput(input) {
+        const name = input.name || '';
+        if (
+            name.startsWith('attendance_') ||
+            name.startsWith('continuous_assessment_') ||
+            name.startsWith('part_a_') ||
+            name.startsWith('part_b_')
+        ) {
+            const rounded = roundMarkValue(input.value);
+            if (rounded !== '' && input.value !== rounded) {
+                input.value = rounded;
+            }
+        }
+    }
+
+    function initializeMarksCalculation() {
+        const rows = document.querySelectorAll('tr[data-student-id]');
+        
+        if (rows.length === 0) {
+            // No rows found yet, try again after a delay
+            setTimeout(initializeMarksCalculation, 500);
+            return;
+        }
+        
+        rows.forEach(row => {
+            // Calculate on page load
+            updateRow(row);
+            
+            // Add event listeners for real-time calculation
+            const marksInputs = row.querySelectorAll('.marks-input');
+            marksInputs.forEach(input => {
+                // Check if listener already added (using data attribute)
+                if (input.dataset.listenerAdded === 'true') {
+                    return;
+                }
+                
+                // Mark as having listener
+                input.dataset.listenerAdded = 'true';
+                
+                // Listen to input events for real-time calculation
+                input.addEventListener('input', function() {
+                    updateRow(row);
+                    // Trigger auto-save
+                    if (typeof triggerAutoSave === 'function') {
+                        triggerAutoSave();
+                    }
+                });
+                
+                input.addEventListener('change', function() {
+                    roundTheoryInput(input);
+                    updateRow(row);
+                });
+
+                input.addEventListener('blur', function() {
+                    roundTheoryInput(input);
+                    updateRow(row);
+                });
+                
+                // Also trigger on paste
+                input.addEventListener('paste', function() {
+                    setTimeout(() => updateRow(row), 10);
+                });
+            });
+            
+            // Handle attendance input changes to show/hide manual badge
+            const attendanceInput = row.querySelector('.attendance-input');
+            if (attendanceInput) {
+                const studentId = attendanceInput.dataset.studentId;
+                const manualBadge = document.getElementById(`manual-badge-${studentId}`);
+                
+                attendanceInput.addEventListener('input', function() {
+                    // Show badge when user enters a value
+                    if (attendanceInput.value && attendanceInput.value.trim() !== '') {
+                        if (manualBadge) {
+                            manualBadge.style.display = 'inline-block';
+                        }
+                    } else {
+                        // Hide badge when input is cleared
+                        if (manualBadge) {
+                            manualBadge.style.display = 'none';
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    // Initialize immediately
+    initializeMarksCalculation();
+    
+    // Also recalculate after delays to ensure DOM is fully ready
+    setTimeout(() => {
+        document.querySelectorAll('tr[data-student-id]').forEach(row => {
+            updateRow(row);
+        });
+    }, 200);
+    
+    setTimeout(() => {
+        document.querySelectorAll('tr[data-student-id]').forEach(row => {
+            updateRow(row);
+        });
+    }, 1000);
+    
+    // Recalculate when subject changes (if there's a subject selector)
+    const subjectSelect = document.querySelector('select[name="subject_id"]');
+    if (subjectSelect) {
+        subjectSelect.addEventListener('change', () => {
+            setTimeout(() => {
+                initializeMarksCalculation();
+            }, 500);
+        });
+    }
+    
+    // Auto-save functionality
+    let autoSaveTimeout = null;
+    let isSaving = false;
+    const saveStatus = document.getElementById('saveStatus');
+    const saveStatusIcon = document.getElementById('saveStatusIcon');
+    const saveStatusText = document.getElementById('saveStatusText');
+    const sessionId = {{ session.id }};
+    const subjectId = {{ selected_subject.id if selected_subject else 'null' }};
+    
+    function triggerAutoSave() {
+        // Clear existing timeout
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        
+        // Show "Saving..." status
+        if (saveStatus) {
+            saveStatus.style.display = 'inline';
+            saveStatusIcon.className = 'fas fa-spinner fa-spin';
+            saveStatusIcon.style.color = '#ffc107';
+            saveStatusText.textContent = 'Saving...';
+        }
+        
+        // Set new timeout (debounce: 2 seconds)
+        autoSaveTimeout = setTimeout(() => {
+            if (isSaving) {
+                // If already saving, retry after a short delay
+                setTimeout(triggerAutoSave, 500);
+                return;
+            }
+            
+            performAutoSave();
+        }, 2000);
+    }
+    
+    function performAutoSave() {
+        if (isSaving || !subjectId) return;
+        
+        isSaving = true;
+        
+        // Collect all marks data
+        const marksData = {};
+        document.querySelectorAll('tr[data-student-id]').forEach(row => {
+            const studentId = row.dataset.studentId;
+            const marks = {};
+            
+            // Get all mark inputs for this student
+            row.querySelectorAll('.marks-input').forEach(input => {
+                const name = input.name;
+                const rawValue = input.value || null;
+                if (name.startsWith('attendance_')) {
+                    marks.attendance = rawValue ? roundMarkValue(rawValue) : null;
+                } else if (name.startsWith('continuous_assessment_')) {
+                    marks.continuous_assessment = rawValue ? roundMarkValue(rawValue) : null;
+                } else if (name.startsWith('part_a_')) {
+                    marks.part_a = rawValue ? roundMarkValue(rawValue) : null;
+                } else if (name.startsWith('part_b_')) {
+                    marks.part_b = rawValue ? roundMarkValue(rawValue) : null;
+                } else if (name.startsWith('sessional_report_')) {
+                    marks.sessional_report = input.value || null;
+                } else if (name.startsWith('sessional_viva_')) {
+                    marks.sessional_viva = input.value || null;
+                } else if (name.startsWith('supervisor_assessment_')) {
+                    marks.supervisor_assessment = input.value || null;
+                } else if (name.startsWith('proposal_presentation_')) {
+                    marks.proposal_presentation = input.value || null;
+                } else if (name.startsWith('project_report_')) {
+                    marks.project_report = input.value || null;
+                } else if (name.startsWith('defense_')) {
+                    marks.defense = input.value || null;
+                } else if (name.startsWith('viva_')) {
+                    marks.viva = input.value || null;
+                }
+            });
+            
+            if (Object.keys(marks).length > 0) {
+                marksData[studentId] = marks;
+            }
+        });
+        
+        // Send to server
+        fetch(`/result-management/auto_save_marks/${sessionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                subject_id: subjectId,
+                marks: marksData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            isSaving = false;
+            if (data.success) {
+                // Show success status
+                if (saveStatus) {
+                    saveStatusIcon.className = 'fas fa-check-circle';
+                    saveStatusIcon.style.color = '#28a745';
+                    saveStatusText.textContent = 'Saved';
+                    // Hide after 3 seconds
+                    setTimeout(() => {
+                        saveStatus.style.display = 'none';
+                    }, 3000);
+                }
+            } else {
+                // Show error status
+                if (saveStatus) {
+                    saveStatusIcon.className = 'fas fa-exclamation-circle';
+                    saveStatusIcon.style.color = '#dc3545';
+                    saveStatusText.textContent = 'Error saving';
+                    // Hide after 5 seconds
+                    setTimeout(() => {
+                        saveStatus.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        })
+        .catch(error => {
+            isSaving = false;
+            console.error('Auto-save error:', error);
+            // Show error status
+            if (saveStatus) {
+                saveStatusIcon.className = 'fas fa-exclamation-circle';
+                saveStatusIcon.style.color = '#dc3545';
+                saveStatusText.textContent = 'Error saving';
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    saveStatus.style.display = 'none';
+                }, 5000);
+            }
+        });
+    }
+
+    // --- DEBUGGING Tab Navigation ---
+    console.log('Tab navigation script loaded. Awaiting Tab key press...');
+
+    const tableBody = document.querySelector('table > tbody');
+    if (tableBody) {
+        console.log('Table body found. Attaching keydown listener.');
+        tableBody.addEventListener('keydown', function(e) {
+            if (e.key !== 'Tab') return;
+
+            const activeInput = e.target;
+            console.log('Keydown event: Tab pressed. Active element:', activeInput);
+            
+            if (!activeInput.matches('input.marks-input')) {
+                console.log('Event ignored: Active element is not a marks-input.');
+                return;
+            }
+            
+            console.log('%cTab navigation started!', 'color: blue; font-weight: bold;');
+            e.preventDefault();
+
+            const allInputs = Array.from(document.querySelectorAll('input.marks-input'));
+            const currentIndex = allInputs.indexOf(activeInput);
+            console.log(`Current Input Index: ${currentIndex} of ${allInputs.length - 1}`);
+
+            const currentCell = activeInput.closest('td');
+            const cellIndex = Array.from(currentCell.parentElement.children).indexOf(currentCell);
+            
+            const currentRow = currentCell.parentElement;
+            const nextRow = currentRow.nextElementSibling;
+
+            let nextInput = null;
+
+            // 1. Try to move down in the same column
+            if (nextRow) {
+                const nextCell = nextRow.children[cellIndex];
+                if (nextCell) {
+                    nextInput = nextCell.querySelector('input.marks-input');
+                    if (nextInput) console.log('Found next input in the same column, next row.');
+                }
+            }
+
+            // 2. If at the bottom, move to the top of the next column
+            if (!nextInput) {
+                console.log('End of column reached. Searching for next column...');
+                const rows = Array.from(currentRow.parentElement.children);
+                for (let i = cellIndex + 1; i < rows[0].children.length; i++) {
+                    const topCellInNextColumn = rows[0].children[i];
+                    if (topCellInNextColumn) {
+                         nextInput = topCellInNextColumn.querySelector('input.marks-input');
+                         if (nextInput) {
+                             console.log(`Found next input in new column at index ${i}.`);
+                             break;
+                         }
+                    }
+                }
+            }
+            
+            // 3. If at the very last input, cycle to the first one
+            if (!nextInput) {
+                console.log('End of table reached. Cycling to the first input.');
+                nextInput = allInputs[0];
+            }
+
+            if (nextInput) {
+                console.log('%cFocusing next input:', 'color: green;', nextInput);
+                nextInput.focus();
+                nextInput.select();
+            } else {
+                console.error('%cError: Could not find any next input to focus.', 'color: red;');
+            }
+        });
+    } else {
+        console.error('Error: Could not find the table body (table > tbody) to attach listener.');
+    }
+    
+    // Refresh Marks Button Handler
+    const refreshMarksBtn = document.getElementById('refreshMarksBtn');
+    if (refreshMarksBtn) {
+        refreshMarksBtn.addEventListener('click', function() {
+            const subjectId = this.dataset.subjectId;
+            // Use sessionId declared in outer scope (line 313)
+            
+            if (!subjectId) {
+                alert('Subject ID not found');
+                return;
+            }
+            
+            if (!confirm('This will refresh all marks from Class Management and Exam Paper Evaluation. Continue?')) {
+                return;
+            }
+            
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+            
+            fetch(`/result-management/refresh_marks/${sessionId}?subject_id=${subjectId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Marks refreshed successfully!');
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Error refreshing marks');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while refreshing marks');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
+        });
+    }
+    
+    // WebSocket live update listener for marks (using sessionId declared above)
+    // Join result session room for live updates
+    if (typeof window.joinResultSessionRoom === 'function') {
+        window.joinResultSessionRoom(sessionId);
+    }
+    
+    // Listen for marks updates
+    window.addEventListener('ws:marks_updated', function(event) {
+        const data = event.detail;
+        if (data.session_id === sessionId) {
+            // Reload the page to show updated marks
+            console.log('Marks updated via WebSocket, reloading...');
+            window.location.reload();
+        }
+    });
+    
+    // Cleanup: Leave room when page unloads
+    window.addEventListener('beforeunload', function() {
+        if (typeof window.leaveResultSessionRoom === 'function') {
+            window.leaveResultSessionRoom(sessionId);
+        }
+    });
+});
+</script>
+{% endblock %}
+

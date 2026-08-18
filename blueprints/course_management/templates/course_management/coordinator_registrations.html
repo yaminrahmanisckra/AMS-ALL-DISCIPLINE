@@ -1,0 +1,1629 @@
+{% extends "base.html" %}
+{% block title %}Course Registration Review{% endblock %}
+{% block mobile_title %}Registration{% endblock %}
+{% block extra_css %}
+<style>
+    .review-tab-btn.active { font-weight: 600; }
+    .course-wise-card { border-left: 4px solid #198754; }
+    .course-wise-card .card-header { background: linear-gradient(135deg, #d1e7dd 0%, #a3cfbb 100%); color: #0a3622; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">Course Registration Review</h1>
+            <p class="text-muted mb-0">View finalized student course registrations</p>
+        </div>
+        <div>
+            <a href="{{ url_for('course_management.coordinator_register_student') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Register Courses for Student
+            </a>
+        </div>
+    </div>
+
+    {% if can_course_wise_review %}
+    <ul class="nav nav-tabs mb-4" id="reviewTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active review-tab-btn" id="student-wise-tab" data-bs-toggle="tab" data-bs-target="#studentWisePane" type="button" role="tab">
+                <i class="fas fa-user me-1"></i>Student Wise
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link review-tab-btn" id="course-wise-tab" data-bs-toggle="tab" data-bs-target="#courseWisePane" type="button" role="tab">
+                <i class="fas fa-book me-1"></i>Course Wise Registration
+            </button>
+        </li>
+    </ul>
+    {% endif %}
+
+    <div class="tab-content" id="reviewTabContent">
+    <div class="tab-pane fade show active" id="studentWisePane" role="tabpanel">
+    <!-- Filter Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Registrations</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('course_management.coordinator_registrations') }}" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="session" class="form-label">Academic Session</label>
+                        <select class="form-select" id="session" name="session">
+                            <option value="">All Sessions</option>
+                            {% for session in academic_sessions %}
+                            <option value="{{ session }}" {% if selected_session == session %}selected{% endif %}>{{ session }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="batch" class="form-label">Batch</label>
+                        <select class="form-select" id="batch" name="batch">
+                            <option value="">All Batches</option>
+                            {% for batch in batches %}
+                            <option value="{{ batch }}" {% if selected_batch == batch %}selected{% endif %}>{{ batch }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="student_id" class="form-label">Student</label>
+                        <select class="form-select" id="student_id" name="student_id">
+                            <option value="">All Students</option>
+                            {% for student in students %}
+                            <option value="{{ student.id }}" {% if selected_student_id == student.id %}selected{% endif %}>
+                                {{ student.student_id }} - {{ student.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search me-2"></i>Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pending Registrations (Invitations) -->
+    {% if pending_registrations %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Pending Registrations (Invitations)</h5>
+        </div>
+        <div class="card-body">
+            {% for key, data in pending_registrations.items() %}
+            <div class="card mb-3 border-warning">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ data.student.name }}</strong> ({{ data.student.student_id }})
+                        <br>
+                        <small class="text-muted">
+                            Batch: {{ data.student.batch or 'N/A' }} | 
+                            Session: {{ data.session }} | 
+                            Year: {{ data.year }} | 
+                            Term: {{ data.term }}
+                        </small>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-primary me-2 review-finalize-btn" 
+                                data-student-id="{{ data.student.id }}" 
+                                data-session="{{ data.session }}" 
+                                data-year="{{ data.year }}" 
+                                data-term="{{ data.term }}" 
+                                data-is-pending="true">
+                            <i class="fas fa-edit me-1"></i>Review & Finalize
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive m-table-scroll-sticky">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>SL</th>
+                                    <th>Course Code</th>
+                                    <th>Course Name</th>
+                                    <th>Credit</th>
+                                    <th>Type</th>
+                                    <th>Nature</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reg in data.registrations %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ reg.course_code }}</td>
+                                    <td>{{ reg.course_name }}</td>
+                                    <td>{{ reg.credit }}</td>
+                                    <td>{{ reg.course_type }}</td>
+                                    <td>{{ reg.nature or 'Core' }}</td>
+                                    <td>{{ reg.remark or 'Regular' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Finalized Registrations -->
+    {% if finalized_registrations %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Finalized Registrations</h5>
+        </div>
+        <div class="card-body">
+            {% for key, data in finalized_registrations.items() %}
+            <div class="card mb-3 border-success">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ data.student.name }}</strong> ({{ data.student.student_id }})
+                        <br>
+                        <small class="text-muted">
+                            Batch: {{ data.student.batch or 'N/A' }} | 
+                            Session: {{ data.session }} | 
+                            Year: {{ data.year }} | 
+                            Term: {{ data.term }}
+                        </small>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-primary me-2 edit-registration-btn" 
+                                data-student-id="{{ data.student.id }}" 
+                                data-session="{{ data.session }}" 
+                                data-year="{{ data.year }}" 
+                                data-term="{{ data.term }}" 
+                                data-is-pending="false">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive m-table-scroll-sticky">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>SL</th>
+                                    <th>Course Code</th>
+                                    <th>Course Name</th>
+                                    <th>Credit</th>
+                                    <th>Type</th>
+                                    <th>Nature</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reg in data.registrations %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ reg.course_code }}</td>
+                                    <td>{{ reg.course_name }}</td>
+                                    <td>{{ reg.credit }}</td>
+                                    <td>{{ reg.course_type }}</td>
+                                    <td>{{ reg.nature }}</td>
+                                    <td>{{ reg.remark }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-info fw-bold">
+                                    <td colspan="3" class="text-end">Total Credits:</td>
+                                    <td>{{ data.registrations | sum(attribute='credit') | round(1) }}</td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif selected_session or selected_batch or selected_student_id %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>No finalized registrations found for the selected filters.
+    </div>
+    {% else %}
+    <div class="alert alert-secondary">
+        <i class="fas fa-info-circle me-2"></i>Please select Session, Batch, or Student from the filters above to view finalized registrations.
+    </div>
+    {% endif %}
+    </div>
+
+    {% if can_course_wise_review %}
+    <div class="tab-pane fade" id="courseWisePane" role="tabpanel">
+        <div class="card shadow-sm mb-4 course-wise-card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Course Wise Registration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">সেশন, ইয়ার, টার্ম ও সাবজেক্ট সিলেক্ট করে সেই কোর্সে রেজিস্টার্ড শিক্ষার্থীদের দেখুন ও সম্পাদনা করুন।</p>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="cwSession" class="form-label">Academic Session</label>
+                        <select class="form-select" id="cwSession">
+                            <option value="">Select Session</option>
+                            {% for session in academic_sessions %}
+                            <option value="{{ session }}">{{ session }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="cwYear" class="form-label">Year</label>
+                        <select class="form-select" id="cwYear" disabled>
+                            <option value="">Select</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="cwTerm" class="form-label">Term</label>
+                        <select class="form-select" id="cwTerm" disabled>
+                            <option value="">Select</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="cwSubject" class="form-label">Subject</label>
+                        <select class="form-select" id="cwSubject" disabled>
+                            <option value="">Select session, year &amp; term first</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary w-100" id="cwLoadBtn" disabled>
+                            <i class="fas fa-search me-1"></i>Load
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="cwStatus"></div>
+
+        <div class="card shadow-sm mb-4" id="cwResultsCard" style="display: none;">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Registered Students</h5>
+                <span class="badge bg-light text-dark" id="cwStudentCount">0</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong id="cwCourseLabel"></strong>
+                    <div class="text-muted small" id="cwContextLabel"></div>
+                </div>
+                <div class="table-responsive m-table-scroll-sticky">
+                    <table class="table table-sm table-bordered" id="cwStudentsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>SL</th>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Batch</th>
+                                <th>Status</th>
+                                <th>Retake Course</th>
+                                <th>Remarks</th>
+                                <th>Carry On</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cwStudentsBody"></tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="cwReloadBtn">
+                        <i class="fas fa-sync-alt me-1"></i>Reload
+                    </button>
+                    <button type="button" class="btn btn-primary" id="cwSaveBtn" disabled>
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-secondary" id="cwEmptyHint">
+            <i class="fas fa-info-circle me-2"></i>সেশন, ইয়ার, টার্ম ও সাবজেক্ট সিলেক্ট করে Load বাটনে ক্লিক করুন।
+        </div>
+    </div>
+    {% endif %}
+    </div>
+</div>
+
+<!-- View/Edit Modal -->
+<div class="modal fade" id="registrationModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">View/Edit Registration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="registrationContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveEditBtn" style="display: none;">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Course Modal -->
+<div class="modal fade" id="addCourseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="addCourseContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentEditData = null;
+
+// Update student dropdown when batch changes
+document.getElementById('batch').addEventListener('change', function() {
+    const batch = this.value;
+    const studentSelect = document.getElementById('student_id');
+    
+    if (!batch) {
+        // Show all students
+        studentSelect.innerHTML = '<option value="">All Students</option>';
+        {% for student in students %}
+        studentSelect.innerHTML += '<option value="{{ student.id }}">{{ student.student_id }} - {{ student.name }}</option>';
+        {% endfor %}
+        return;
+    }
+    
+    // Filter students by batch
+    studentSelect.innerHTML = '<option value="">All Students</option>';
+    {% for student in students %}
+    {% if student.batch %}
+    if ('{{ student.batch }}' === batch) {
+        studentSelect.innerHTML += '<option value="{{ student.id }}">{{ student.student_id }} - {{ student.name }}</option>';
+    }
+    {% endif %}
+    {% endfor %}
+});
+
+function viewRegistration(studentId, session, year, term, isPending) {
+    // Handle default parameter for older browsers
+    if (typeof isPending === 'undefined') {
+        isPending = false;
+    }
+    
+    console.log('viewRegistration called:', { studentId, session, year, term, isPending });
+    
+    // Check if Bootstrap is available
+    if (typeof bootstrap === 'undefined') {
+        alert('Bootstrap is not loaded. Please refresh the page.');
+        console.error('Bootstrap is not defined');
+        return;
+    }
+    
+    const modalElement = document.getElementById('registrationModal');
+    if (!modalElement) {
+        alert('Modal element not found. Please refresh the page.');
+        console.error('registrationModal element not found');
+        return;
+    }
+    
+    let modal;
+    try {
+        modal = new bootstrap.Modal(modalElement);
+    } catch (error) {
+        console.error('Error creating modal:', error);
+        alert('Error initializing modal. Please refresh the page.');
+        return;
+    }
+    
+    const content = document.getElementById('registrationContent');
+    const saveBtn = document.getElementById('saveEditBtn');
+    
+    if (!content || !saveBtn) {
+        alert('Required elements not found. Please refresh the page.');
+        console.error('Required elements not found:', { content: !!content, saveBtn: !!saveBtn });
+        return;
+    }
+    
+    // Update modal title based on status
+    const modalTitle = document.querySelector('#registrationModal .modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = isPending ? 'Review & Finalize Registration' : 'View/Edit Registration';
+    }
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    saveBtn.style.display = 'none';
+    saveBtn.setAttribute('data-is-pending', isPending ? 'true' : 'false');
+    
+    try {
+        modal.show();
+    } catch (error) {
+        console.error('Error showing modal:', error);
+        alert('Error opening modal. Please refresh the page.');
+        return;
+    }
+    
+    fetch(`/course-management/coordinator/registration/${studentId}/view?session=${encodeURIComponent(session)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data.success) {
+                content.innerHTML = `<div class="alert alert-danger">${data.message || 'Error loading registration'}</div>`;
+                return;
+            }
+            
+            if (!data.courses || data.courses.length === 0) {
+                content.innerHTML = `<div class="alert alert-warning">No courses found for this registration.</div>`;
+                return;
+            }
+            
+            currentEditData = data;
+            
+            let html = `
+                <div class="mb-3">
+                    <h6>Student Information</h6>
+                    <p><strong>Name:</strong> ${data.student.name}</p>
+                    <p><strong>Student ID:</strong> ${data.student.student_id}</p>
+                    <p><strong>Batch:</strong> ${data.student.batch || 'N/A'}</p>
+                    <p><strong>Session:</strong> ${data.session} | <strong>Year:</strong> ${data.year} | <strong>Term:</strong> ${data.term}</p>
+                </div>
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="showAddCourseModal('${data.session}', '${data.year}', '${data.term}')">
+                            <i class="fas fa-plus me-1"></i>Add Course
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" id="deregisterAllBtn" style="display: ${data.courses && data.courses.length > 0 ? 'inline-block' : 'none'};" onclick="deregisterAllCourses()">
+                            <i class="fas fa-times-circle me-1"></i>Deregister All Courses
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive m-table-scroll-sticky">
+                    <table class="table table-bordered" id="editTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>SL</th>
+                                <th>Course Code</th>
+                                <th>Course Name</th>
+                                <th>Credit</th>
+                                <th>Type</th>
+                                <th>Nature</th>
+                                <th>Source Year/Term</th>
+                                <th>Remarks</th>
+                                <th>Carry On</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editTableBody">
+            `;
+            
+            data.courses.forEach((course, index) => {
+                const isRetake = course.remark === 'Retake' || course.remark === 'Re-retake';
+                const carryOnId = `carryOn_${course.id}_${index}`;
+                html += `
+                    <tr data-course-id="${course.id}" data-course-table-id="${course.course_id || course.id}"
+                        data-source-year="${course.source_year || data.year || ''}"
+                        data-source-term="${course.source_term || data.term || ''}"
+                        data-use-relevant-for-committee="${typeof course.use_relevant_for_committee === 'boolean' ? course.use_relevant_for_committee : true}">
+                        <td>${index + 1}</td>
+                        <td>${course.course_code}</td>
+                        <td>${course.course_name}</td>
+                        <td>${course.credit}</td>
+                        <td>${course.course_type}</td>
+                        <td>${course.nature || 'Core'}</td>
+                        <td>${course.source_year || data.year || '-'} / ${course.source_term || data.term || '-'}</td>
+                        <td>
+                            <select class="form-select form-select-sm remark-select" data-course-id="${course.id}" data-index="${index}">
+                                <option value="Regular" ${course.remark === 'Regular' ? 'selected' : ''}>Regular</option>
+                                <option value="Retake" ${course.remark === 'Retake' ? 'selected' : ''}>Retake</option>
+                                <option value="Re-retake" ${course.remark === 'Re-retake' ? 'selected' : ''}>Re-retake</option>
+                            </select>
+                        </td>
+                        <td>
+                            <div class="form-check form-switch" id="carryOnContainer_${course.id}_${index}" style="display: ${isRetake ? 'block' : 'none'};">
+                                <input class="form-check-input" type="checkbox" id="${carryOnId}" 
+                                       ${course.carry_on ? 'checked' : ''}>
+                                <label class="form-check-label" for="${carryOnId}">Carry On</label>
+                            </div>
+                            <span class="text-muted" id="carryOnPlaceholder_${course.id}_${index}" style="display: ${isRetake ? 'none' : 'inline'};">-</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="removeCourseFromEdit(${course.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info fw-bold">
+                                <td colspan="3" class="text-end">Total Credits:</td>
+                                <td id="totalCreditsEdit">${data.total_credits.toFixed(1)}</td>
+                                <td colspan="6"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+            
+            content.innerHTML = html;
+            saveBtn.style.display = 'inline-block';
+            // Update button text based on pending status
+            if (isPending) {
+                saveBtn.innerHTML = '<i class="fas fa-check me-2"></i>Finalize';
+            } else {
+                saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Changes';
+            }
+            
+            // Update deregister all button visibility
+            checkAndUpdateDeregisterAllButton();
+            
+            // Add event listeners for Remarks dropdown to show/hide Carry on
+            document.querySelectorAll('.remark-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const courseId = this.getAttribute('data-course-id');
+                    const index = this.getAttribute('data-index');
+                    const remark = this.value;
+                    const isRetake = remark === 'Retake' || remark === 'Re-retake';
+                    const row = this.closest('tr');
+                    
+                    const carryOnContainer = document.getElementById(`carryOnContainer_${courseId}_${index}`);
+                    const carryOnPlaceholder = document.getElementById(`carryOnPlaceholder_${courseId}_${index}`);
+                    
+                    if (carryOnContainer && carryOnPlaceholder) {
+                        if (isRetake) {
+                            carryOnContainer.style.display = 'block';
+                            carryOnPlaceholder.style.display = 'none';
+                            if (row && !row.getAttribute('data-use-relevant-for-committee')) {
+                                row.setAttribute('data-use-relevant-for-committee', 'true');
+                            }
+                        } else {
+                            carryOnContainer.style.display = 'none';
+                            carryOnPlaceholder.style.display = 'inline';
+                            if (row) row.setAttribute('data-use-relevant-for-committee', 'false');
+                            // Uncheck carry on if Regular is selected
+                            const carryOnCheckbox = document.getElementById(`carryOn_${courseId}_${index}`);
+                            if (carryOnCheckbox) {
+                                carryOnCheckbox.checked = false;
+                            }
+                        }
+                    }
+                });
+            });
+        })
+        .catch(error => {
+            console.error('Error loading registration:', error);
+            content.innerHTML = `<div class="alert alert-danger">Error loading registration: ${error.message || 'Unknown error'}</div>`;
+        });
+}
+
+function removeCourseFromEdit(courseId) {
+    if (!currentEditData) {
+        alert('No registration data available.');
+        return;
+    }
+    
+    const row = document.querySelector(`tr[data-course-id="${courseId}"]`);
+    if (!row) {
+        alert('Course row not found.');
+        return;
+    }
+    
+    const courseCode = row.cells[1] ? row.cells[1].textContent.trim() : '';
+    const courseName = row.cells[2] ? row.cells[2].textContent.trim() : '';
+    
+    if (!confirm(`Are you sure you want to remove ${courseCode} - ${courseName} from this registration?`)) {
+        return;
+    }
+    
+    // Call API to instantly deregister the course
+    fetch('/course-management/coordinator/registration/remove-course', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            student_id: currentEditData.student.id,
+            session: currentEditData.session,
+            year: currentEditData.year,
+            term: currentEditData.term,
+            registration_id: courseId  // StudentCourseRegistration ID
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the modal content to get fresh data from backend
+            const studentId = currentEditData.student.id;
+            const session = currentEditData.session;
+            const year = currentEditData.year;
+            const term = currentEditData.term;
+            const isPending = document.getElementById('saveEditBtn').getAttribute('data-is-pending') === 'true';
+            
+            // Reload modal with fresh data
+            viewRegistration(studentId, session, year, term, isPending);
+            
+            // Show success message
+            alert(`Successfully removed ${courseCode} from registration.`);
+        } else {
+            alert(data.message || 'Failed to remove course.');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing course:', error);
+        alert('Error removing course. Please try again.');
+    });
+}
+
+function updateTotalCredits() {
+    const rows = document.querySelectorAll('#editTableBody tr');
+    let total = 0;
+    rows.forEach(row => {
+        const creditCell = row.cells[3];
+        if (creditCell) {
+            total += parseFloat(creditCell.textContent) || 0;
+        }
+    });
+    const totalCell = document.getElementById('totalCreditsEdit');
+    if (totalCell) {
+        totalCell.textContent = total.toFixed(1);
+    }
+}
+
+function showAddCourseModal(session, year, term) {
+    const modalElement = document.getElementById('addCourseModal');
+    if (!modalElement) {
+        alert('Modal element not found.');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(modalElement);
+    const content = document.getElementById('addCourseContent');
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    modal.show();
+    
+    // Fetch available courses
+    fetch(`/course-management/student/registration/api/courses?year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success || !data.courses || data.courses.length === 0) {
+                content.innerHTML = '<div class="alert alert-warning">No courses available for this Year and Term.</div>';
+                return;
+            }
+            
+            // Get already registered course codes (check by course code, not ID, to allow re-adding deleted courses)
+            const registeredCourseCodes = new Set();
+            document.querySelectorAll('#editTableBody tr').forEach(row => {
+                const courseCode = row.cells[1] ? row.cells[1].textContent.trim() : null;
+                if (courseCode) {
+                    registeredCourseCodes.add(courseCode);
+                }
+            });
+            
+            // Filter out already registered courses by course code
+            const availableCourses = data.courses.filter(c => !registeredCourseCodes.has(c.course_code));
+            
+            if (availableCourses.length === 0) {
+                content.innerHTML = '<div class="alert alert-info">All available courses are already registered.</div>';
+                return;
+            }
+            
+            let html = '<div class="table-responsive"><table class="table table-bordered table-hover"><thead class="table-light"><tr><th>Course Code</th><th>Course Name</th><th>Credit</th><th>Type</th><th>Nature</th><th>Action</th></tr></thead><tbody>';
+            
+            availableCourses.forEach(course => {
+                html += `
+                    <tr>
+                        <td>${course.course_code}</td>
+                        <td>${course.course_name}</td>
+                        <td>${course.credit}</td>
+                        <td>${course.course_type || 'Theory'}</td>
+                        <td>${course.nature || 'Core'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="addCourseToEdit(${course.id}, '${course.course_code.replace(/'/g, "\\'")}', '${course.course_name.replace(/'/g, "\\'")}', ${course.credit}, '${course.course_type || 'Theory'}', '${course.nature || 'Core'}')">
+                                <i class="fas fa-plus me-1"></i>Add
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            content.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error loading courses:', error);
+            content.innerHTML = `<div class="alert alert-danger">Error loading courses: ${error.message || 'Unknown error'}</div>`;
+        });
+}
+
+function addCourseToEdit(courseId, courseCode, courseName, credit, courseType, nature) {
+    const tbody = document.getElementById('editTableBody');
+    if (!tbody) {
+        alert('Table body not found.');
+        return;
+    }
+    
+    // Check if course already exists by course code (not ID, to allow re-adding deleted courses)
+    const existingRows = tbody.querySelectorAll('tr');
+    for (let row of existingRows) {
+        const existingCourseCode = row.cells[1] ? row.cells[1].textContent.trim() : '';
+        if (existingCourseCode === courseCode) {
+            alert('This course is already added.');
+            return;
+        }
+    }
+    
+    const rows = tbody.querySelectorAll('tr');
+    const newIndex = rows.length + 1;
+    const carryOnId = `carryOn_${courseId}_${newIndex}`;
+    
+    const newRow = document.createElement('tr');
+    newRow.setAttribute('data-course-id', courseId); // For new courses, this is the Course ID
+    newRow.setAttribute('data-course-table-id', courseId); // Store Course table ID
+    newRow.setAttribute('data-source-year', currentEditData ? currentEditData.year : '');
+    newRow.setAttribute('data-source-term', currentEditData ? currentEditData.term : '');
+    newRow.setAttribute('data-use-relevant-for-committee', 'false');
+    newRow.innerHTML = `
+        <td>${newIndex}</td>
+        <td>${courseCode}</td>
+        <td>${courseName}</td>
+        <td>${credit}</td>
+        <td>${courseType}</td>
+        <td>${nature}</td>
+        <td>${currentEditData ? currentEditData.year : '-'} / ${currentEditData ? currentEditData.term : '-'}</td>
+        <td>
+            <select class="form-select form-select-sm remark-select" data-course-id="${courseId}" data-index="${newIndex}">
+                <option value="Regular" selected>Regular</option>
+                <option value="Retake">Retake</option>
+                <option value="Re-retake">Re-retake</option>
+            </select>
+        </td>
+        <td>
+            <div class="form-check form-switch" id="carryOnContainer_${courseId}_${newIndex}" style="display: none;">
+                <input class="form-check-input" type="checkbox" id="${carryOnId}">
+                <label class="form-check-label" for="${carryOnId}">Carry On</label>
+            </div>
+            <span class="text-muted" id="carryOnPlaceholder_${courseId}_${newIndex}">-</span>
+        </td>
+        <td>
+            <button class="btn btn-sm btn-danger" onclick="removeCourseFromEdit(${courseId})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    
+    // Add event listener for the new Remarks dropdown
+    const remarkSelect = newRow.querySelector('.remark-select');
+    if (remarkSelect) {
+        remarkSelect.addEventListener('change', function() {
+            const courseId = this.getAttribute('data-course-id');
+            const index = this.getAttribute('data-index');
+            const remark = this.value;
+            const isRetake = remark === 'Retake' || remark === 'Re-retake';
+            
+            const carryOnContainer = document.getElementById(`carryOnContainer_${courseId}_${index}`);
+            const carryOnPlaceholder = document.getElementById(`carryOnPlaceholder_${courseId}_${index}`);
+            
+            if (carryOnContainer && carryOnPlaceholder) {
+                if (isRetake) {
+                    carryOnContainer.style.display = 'block';
+                    carryOnPlaceholder.style.display = 'none';
+                    if (!newRow.getAttribute('data-use-relevant-for-committee')) {
+                        newRow.setAttribute('data-use-relevant-for-committee', 'true');
+                    } else if (newRow.getAttribute('data-use-relevant-for-committee') === 'false') {
+                        // New row defaults to merged behavior for retake unless explicitly changed elsewhere.
+                        newRow.setAttribute('data-use-relevant-for-committee', 'true');
+                    }
+                } else {
+                    carryOnContainer.style.display = 'none';
+                    carryOnPlaceholder.style.display = 'inline';
+                    newRow.setAttribute('data-use-relevant-for-committee', 'false');
+                    const carryOnCheckbox = document.getElementById(`carryOn_${courseId}_${index}`);
+                    if (carryOnCheckbox) {
+                        carryOnCheckbox.checked = false;
+                    }
+                }
+            }
+        });
+    }
+    
+    // Update row numbers
+    updateRowNumbers();
+    updateTotalCredits();
+    
+    // Close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addCourseModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+function updateRowNumbers() {
+    const rows = document.querySelectorAll('#editTableBody tr');
+    rows.forEach((row, index) => {
+        const slCell = row.cells[0];
+        if (slCell) {
+            slCell.textContent = index + 1;
+        }
+    });
+}
+
+function deregisterAllCourses() {
+    if (!currentEditData) {
+        alert('No registration data available.');
+        return;
+    }
+    
+    const rows = document.querySelectorAll('#editTableBody tr');
+    if (rows.length === 0) {
+        alert('No courses to deregister.');
+        return;
+    }
+    
+    const courseCount = rows.length;
+    if (!confirm(`Are you sure you want to deregister all ${courseCount} course(s) from this registration? This action cannot be undone.`)) {
+        return;
+    }
+    
+    // Collect all registration IDs
+    const registrationIds = [];
+    const courseCodes = [];
+    rows.forEach(row => {
+        const registrationId = row.getAttribute('data-course-id');
+        const courseCode = row.cells[1] ? row.cells[1].textContent.trim() : '';
+        if (registrationId && courseCode) {
+            registrationIds.push(parseInt(registrationId));
+            courseCodes.push(courseCode);
+        }
+    });
+    
+    if (registrationIds.length === 0) {
+        alert('No valid courses found to deregister.');
+        return;
+    }
+    
+    // Call API to deregister all courses
+    fetch('/course-management/coordinator/registration/remove-all-courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            student_id: currentEditData.student.id,
+            session: currentEditData.session,
+            year: currentEditData.year,
+            term: currentEditData.term,
+            registration_ids: registrationIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the modal content to get fresh data from backend
+            const studentId = currentEditData.student.id;
+            const session = currentEditData.session;
+            const year = currentEditData.year;
+            const term = currentEditData.term;
+            const isPending = document.getElementById('saveEditBtn').getAttribute('data-is-pending') === 'true';
+            
+            // Reload modal with fresh data
+            viewRegistration(studentId, session, year, term, isPending);
+            
+            // Show success message
+            alert(`Successfully deregistered all ${registrationIds.length} course(s) from registration.`);
+        } else {
+            alert(data.message || 'Failed to deregister courses.');
+        }
+    })
+    .catch(error => {
+        console.error('Error deregistering all courses:', error);
+        alert('Error deregistering courses. Please try again.');
+    });
+}
+
+function checkAndUpdateDeregisterAllButton() {
+    const rows = document.querySelectorAll('#editTableBody tr');
+    const deregisterAllBtn = document.getElementById('deregisterAllBtn');
+    if (deregisterAllBtn) {
+        if (rows.length === 0) {
+            deregisterAllBtn.style.display = 'none';
+        } else {
+            deregisterAllBtn.style.display = 'inline-block';
+        }
+    }
+}
+
+document.getElementById('saveEditBtn').addEventListener('click', function() {
+    if (!currentEditData) return;
+    
+    const rows = document.querySelectorAll('#editTableBody tr');
+    const courses = [];
+    
+    rows.forEach(row => {
+        const courseId = row.getAttribute('data-course-id'); // StudentCourseRegistration ID (for existing) or Course ID (for new)
+        const courseTableId = row.getAttribute('data-course-table-id') || courseId; // Course table ID
+        const sourceYear = row.getAttribute('data-source-year') || currentEditData.year;
+        const sourceTerm = row.getAttribute('data-source-term') || currentEditData.term;
+        const rawUseRelevant = row.getAttribute('data-use-relevant-for-committee');
+        const remarkSelect = row.querySelector('.remark-select');
+        const remark = remarkSelect ? remarkSelect.value : 'Regular';
+        const isRetake = remark === 'Retake' || remark === 'Re-retake';
+        const useRelevantForCommittee = isRetake
+            ? (rawUseRelevant === null || rawUseRelevant === '' ? true : rawUseRelevant === 'true')
+            : false;
+        
+        // Get carry on checkbox value
+        let carryOn = false;
+        if (isRetake && remarkSelect) {
+            const carryOnId = `carryOn_${courseId}_${remarkSelect.getAttribute('data-index')}`;
+            const carryOnCheckbox = document.getElementById(carryOnId);
+            if (carryOnCheckbox) {
+                carryOn = carryOnCheckbox.checked;
+            }
+        }
+        
+        courses.push({
+            id: courseId,
+            course_id: courseTableId, // Use Course table ID for backend
+            course_code: row.cells[1].textContent.trim(),
+            course_name: row.cells[2].textContent.trim(),
+            credit: parseFloat(row.cells[3].textContent) || 0,
+            course_type: row.cells[4].textContent.trim(),
+            nature: row.cells[5].textContent.trim() || 'Core',
+            source_year: sourceYear,
+            source_term: sourceTerm,
+            remark: remark,
+            carry_on: carryOn,
+            use_relevant_for_committee: useRelevantForCommittee
+        });
+    });
+    
+    const btn = this;
+    const isPending = btn.getAttribute('data-is-pending') === 'true';
+    btn.disabled = true;
+    btn.innerHTML = isPending ? '<i class="fas fa-spinner fa-spin me-2"></i>Finalizing...' : '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    
+    fetch('/course-management/coordinator/registration/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            student_id: currentEditData.student.id,
+            session: currentEditData.session,
+            year: currentEditData.year,
+            term: currentEditData.term,
+            courses: courses,
+            finalize: isPending  // Pass finalize flag for pending registrations
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const message = isPending ? 'Registration finalized successfully!' : 'Registration updated successfully.';
+            alert(message);
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to update registration.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating registration.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        const isPending = btn.getAttribute('data-is-pending') === 'true';
+        btn.innerHTML = isPending ? '<i class="fas fa-check me-2"></i>Finalize' : '<i class="fas fa-save me-2"></i>Save Changes';
+    });
+});
+
+// Add event listeners for Review & Finalize and Edit buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle Review & Finalize buttons (pending registrations)
+    document.querySelectorAll('.review-finalize-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const studentId = parseInt(this.getAttribute('data-student-id'));
+            const session = this.getAttribute('data-session');
+            const year = this.getAttribute('data-year');
+            const term = this.getAttribute('data-term');
+            const isPending = this.getAttribute('data-is-pending') === 'true';
+            
+            console.log('Review & Finalize button clicked:', { studentId, session, year, term, isPending });
+            viewRegistration(studentId, session, year, term, isPending);
+        });
+    });
+    
+    // Handle Edit buttons (finalized registrations)
+    document.querySelectorAll('.edit-registration-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const studentId = parseInt(this.getAttribute('data-student-id'));
+            const session = this.getAttribute('data-session');
+            const year = this.getAttribute('data-year');
+            const term = this.getAttribute('data-term');
+            const isPending = this.getAttribute('data-is-pending') === 'true';
+            
+            console.log('Edit button clicked:', { studentId, session, year, term, isPending });
+            viewRegistration(studentId, session, year, term, isPending);
+        });
+    });
+});
+
+{% if can_course_wise_review %}
+let cwCurrentData = null;
+
+function cwEl(id) {
+    return document.getElementById(id);
+}
+
+function cwSetDisplay(id, value) {
+    const el = cwEl(id);
+    if (el) el.style.display = value;
+}
+
+function cwShowStatus(msg, type) {
+    const box = cwEl('cwStatus');
+    if (!box) return;
+    box.innerHTML = '<div class="alert alert-' + (type || 'info') + ' alert-dismissible py-2"><span>' + msg + '</span><button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button></div>';
+}
+
+function cwHideStatus() {
+    const box = cwEl('cwStatus');
+    if (box) box.innerHTML = '';
+}
+
+const CW_YEAR_ORDER = {{ tenant.year_select_options|tojson }};
+const CW_TERM_ORDER = ['First', 'Second', 'Third', 'Fourth', 'Thesis Term'];
+const CW_DEFAULT_YEARS = {{ tenant.year_select_options|tojson }};
+const CW_DEFAULT_TERMS = ['First', 'Second', 'Thesis Term'];
+
+function cwSortYears(years) {
+    const idx = (y) => {
+        const i = CW_YEAR_ORDER.indexOf(String(y));
+        return i === -1 ? CW_YEAR_ORDER.length : i;
+    };
+    return [...years].sort((a, b) => idx(a) - idx(b) || String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+}
+
+function cwSortTerms(terms) {
+    const idx = (t) => {
+        const i = CW_TERM_ORDER.indexOf(String(t));
+        return i === -1 ? CW_TERM_ORDER.length : i;
+    };
+    return [...terms].sort((a, b) => idx(a) - idx(b) || String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+}
+
+function cwPopulateYearTermDropdowns(years, terms) {
+    const yearEl = cwEl('cwYear');
+    const termEl = cwEl('cwTerm');
+    if (!yearEl || !termEl) return;
+
+    yearEl.innerHTML = '<option value="">Select</option>';
+    termEl.innerHTML = '<option value="">Select</option>';
+    years.forEach(y => yearEl.appendChild(new Option(y, y)));
+    terms.forEach(t => termEl.appendChild(new Option(t, t)));
+    yearEl.disabled = false;
+    termEl.disabled = false;
+}
+
+function cwLoadYearTermOptions(session) {
+    const yearEl = cwEl('cwYear');
+    const termEl = cwEl('cwTerm');
+    if (!yearEl || !termEl) return Promise.resolve();
+
+    yearEl.innerHTML = '<option value="">Loading…</option>';
+    termEl.innerHTML = '<option value="">Loading…</option>';
+    yearEl.disabled = true;
+    termEl.disabled = true;
+
+    return fetch('/course-management/student/registration/api/year-term?session=' + encodeURIComponent(session))
+        .then(async response => {
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                throw new Error('Could not load year/term options.');
+            }
+            if (!response.ok || !data.success) {
+                throw new Error(data?.message || 'Could not load year/term options.');
+            }
+            return data;
+        })
+        .then(data => {
+            if (data.year_term_options && data.year_term_options.length) {
+                const years = cwSortYears([...new Set(data.year_term_options.map(yt => yt.year).filter(Boolean))]);
+                const terms = cwSortTerms([...new Set(data.year_term_options.map(yt => yt.term).filter(Boolean))]);
+                cwPopulateYearTermDropdowns(
+                    years.length ? years : CW_DEFAULT_YEARS,
+                    terms.length ? terms : CW_DEFAULT_TERMS
+                );
+            } else {
+                cwPopulateYearTermDropdowns(CW_DEFAULT_YEARS, CW_DEFAULT_TERMS);
+            }
+        })
+        .catch(err => {
+            console.error('Course-wise year/term load failed:', err);
+            cwPopulateYearTermDropdowns(CW_DEFAULT_YEARS, CW_DEFAULT_TERMS);
+            cwShowStatus('Year/Term list loaded with defaults. ' + (err.message || ''), 'warning');
+        });
+}
+
+function cwResetYearTerm() {
+    const yearEl = cwEl('cwYear');
+    const termEl = cwEl('cwTerm');
+    if (yearEl) {
+        yearEl.innerHTML = '<option value="">Select</option>';
+        yearEl.disabled = true;
+    }
+    if (termEl) {
+        termEl.innerHTML = '<option value="">Select</option>';
+        termEl.disabled = true;
+    }
+    cwResetSubject();
+}
+
+function cwResetSubject() {
+    const subjectEl = cwEl('cwSubject');
+    const loadBtn = cwEl('cwLoadBtn');
+    if (subjectEl) {
+        subjectEl.innerHTML = '<option value="">Select session, year &amp; term first</option>';
+        subjectEl.disabled = true;
+    }
+    if (loadBtn) loadBtn.disabled = true;
+}
+
+function cwResetResultsView() {
+    cwSetDisplay('cwResultsCard', 'none');
+    const emptyHint = cwEl('cwEmptyHint');
+    if (emptyHint) {
+        emptyHint.style.display = 'block';
+        emptyHint.className = 'alert alert-secondary';
+        emptyHint.innerHTML = '<i class="fas fa-info-circle me-2"></i>সেশন, ইয়ার, টার্ম ও সাবজেক্ট সিলেক্ট করে Load বাটনে ক্লিক করুন।';
+    }
+}
+
+function cwUpdateLoadButtonState() {
+    const session = cwEl('cwSession')?.value || '';
+    const year = cwEl('cwYear')?.value || '';
+    const term = cwEl('cwTerm')?.value || '';
+    const subject = cwEl('cwSubject')?.value || '';
+    const loadBtn = cwEl('cwLoadBtn');
+    if (loadBtn) loadBtn.disabled = !(session && year && term && subject);
+}
+
+function cwLoadSubjects() {
+    const session = cwEl('cwSession')?.value || '';
+    const year = cwEl('cwYear')?.value || '';
+    const term = cwEl('cwTerm')?.value || '';
+    const subjectEl = cwEl('cwSubject');
+
+    if (!subjectEl) return;
+
+    if (!session || !year || !term) {
+        cwResetSubject();
+        return;
+    }
+
+    subjectEl.disabled = true;
+    subjectEl.innerHTML = '<option value="">Loading subjects…</option>';
+
+    fetch('/course-management/coordinator/registrations/api/course-subjects?session=' + encodeURIComponent(session) + '&year=' + encodeURIComponent(year) + '&term=' + encodeURIComponent(term))
+        .then(async response => {
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                throw new Error('Could not load subjects.');
+            }
+            if (!response.ok || !data.success) {
+                throw new Error(data?.message || 'Failed to load subjects');
+            }
+            return data;
+        })
+        .then(data => {
+            if (!data.subjects || !data.subjects.length) {
+                subjectEl.innerHTML = '<option value="">No registered subjects found</option>';
+                subjectEl.disabled = true;
+                cwUpdateLoadButtonState();
+                return;
+            }
+            subjectEl.innerHTML = '<option value="">Select Subject</option>';
+            data.subjects.forEach(s => {
+                const label = s.course_code + ' – ' + s.course_name + ' (' + s.registration_count + ')';
+                const opt = new Option(label, s.course_code);
+                opt.dataset.courseId = s.course_id || '';
+                opt.dataset.courseName = s.course_name || '';
+                subjectEl.appendChild(opt);
+            });
+            subjectEl.disabled = false;
+            cwUpdateLoadButtonState();
+        })
+        .catch(err => {
+            console.error(err);
+            subjectEl.innerHTML = '<option value="">Error loading subjects</option>';
+            cwShowStatus(err.message || 'Error loading subjects.', 'danger');
+        });
+}
+
+function cwBindRemarkEvents() {
+    document.querySelectorAll('.cw-remark-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const regId = this.getAttribute('data-registration-id');
+            const remark = this.value;
+            const isRetake = remark === 'Retake' || remark === 'Re-retake';
+            const carryWrap = document.getElementById('cwCarryWrap_' + regId);
+            const carryPlaceholder = document.getElementById('cwCarryPlaceholder_' + regId);
+            if (carryWrap && carryPlaceholder) {
+                carryWrap.style.display = isRetake ? 'block' : 'none';
+                carryPlaceholder.style.display = isRetake ? 'none' : 'inline';
+                if (!isRetake) {
+                    const cb = carryWrap.querySelector('input[type="checkbox"]');
+                    if (cb) cb.checked = false;
+                }
+            }
+            const saveBtn = cwEl('cwSaveBtn');
+            if (saveBtn) saveBtn.disabled = false;
+        });
+    });
+    document.querySelectorAll('.cw-carry-on-cb').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const saveBtn = cwEl('cwSaveBtn');
+            if (saveBtn) saveBtn.disabled = false;
+        });
+    });
+}
+
+function cwRenderStudents(data) {
+    cwCurrentData = data;
+    const course = data.course || {};
+    const tbody = cwEl('cwStudentsBody');
+    const resultsCard = cwEl('cwResultsCard');
+    const emptyHint = cwEl('cwEmptyHint');
+    const saveBtn = cwEl('cwSaveBtn');
+
+    if (!data.students || !data.students.length) {
+        if (resultsCard) resultsCard.style.display = 'none';
+        if (emptyHint) {
+            emptyHint.style.display = 'block';
+            emptyHint.className = 'alert alert-info';
+            emptyHint.innerHTML = '<i class="fas fa-info-circle me-2"></i>No registered students found for the selected subject.';
+        }
+        if (saveBtn) saveBtn.disabled = true;
+        return;
+    }
+
+    if (emptyHint) emptyHint.style.display = 'none';
+    if (resultsCard) resultsCard.style.display = 'block';
+
+    const countEl = cwEl('cwStudentCount');
+    const labelEl = cwEl('cwCourseLabel');
+    const contextEl = cwEl('cwContextLabel');
+    if (countEl) countEl.textContent = data.count;
+    if (labelEl) labelEl.textContent = (course.course_code || '') + ' – ' + (course.course_name || '');
+    if (contextEl) contextEl.textContent = 'Session: ' + data.session + ' | Year: ' + data.year + ' | Term: ' + data.term;
+
+    if (!tbody) return;
+
+    let html = '';
+    data.students.forEach((s, index) => {
+        const isRetake = s.remark === 'Retake' || s.remark === 'Re-retake';
+        const statusBadge = s.status === 'finalized'
+            ? '<span class="badge bg-success">Finalized</span>'
+            : '<span class="badge bg-warning text-dark">' + (s.status || 'Pending') + '</span>';
+        const retakeCourseCell = s.is_merged_retake
+            ? '<small>' + (s.registered_course_code || '') + '<br><span class="text-muted">' + (s.registered_course_name || '') + '</span></small>'
+            : (isRetake
+                ? '<small class="text-muted">' + (s.registered_course_code || '-') + '</small>'
+                : '<span class="text-muted">-</span>');
+        html += '<tr data-registration-id="' + s.registration_id + '" data-student-id="' + s.student_id + '">';
+        html += '<td>' + (index + 1) + '</td>';
+        html += '<td>' + (s.student_roll || '') + '</td>';
+        html += '<td>' + (s.student_name || '') + '</td>';
+        html += '<td>' + (s.batch || 'N/A') + '</td>';
+        html += '<td>' + statusBadge + '</td>';
+        html += '<td>' + retakeCourseCell + '</td>';
+        html += '<td><select class="form-select form-select-sm cw-remark-select" data-registration-id="' + s.registration_id + '">';
+        ['Regular', 'Retake', 'Re-retake'].forEach(r => {
+            html += '<option value="' + r + '"' + (s.remark === r ? ' selected' : '') + '>' + r + '</option>';
+        });
+        html += '</select></td>';
+        html += '<td>';
+        html += '<div class="form-check form-switch" id="cwCarryWrap_' + s.registration_id + '" style="display:' + (isRetake ? 'block' : 'none') + ';">';
+        html += '<input class="form-check-input cw-carry-on-cb" type="checkbox" id="cwCarry_' + s.registration_id + '" data-registration-id="' + s.registration_id + '"' + (s.carry_on ? ' checked' : '') + '>';
+        html += '<label class="form-check-label" for="cwCarry_' + s.registration_id + '">Carry On</label></div>';
+        html += '<span class="text-muted" id="cwCarryPlaceholder_' + s.registration_id + '" style="display:' + (isRetake ? 'none' : 'inline') + ';">-</span>';
+        html += '</td>';
+        html += '<td class="text-nowrap">';
+        html += '<button type="button" class="btn btn-sm btn-primary me-1 cw-edit-student-btn" data-student-id="' + s.student_id + '"><i class="fas fa-edit"></i></button>';
+        html += '<button type="button" class="btn btn-sm btn-danger cw-deregister-btn" data-student-id="' + s.student_id + '" data-student-roll="' + (s.student_roll || '') + '" data-student-name="' + (s.student_name || '').replace(/"/g, '&quot;') + '"><i class="fas fa-times-circle"></i></button>';
+        html += '</td></tr>';
+    });
+    tbody.innerHTML = html;
+    if (saveBtn) saveBtn.disabled = true;
+    cwBindRemarkEvents();
+
+    document.querySelectorAll('.cw-edit-student-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const studentId = parseInt(this.getAttribute('data-student-id'));
+            viewRegistration(studentId, data.session, data.year, data.term, false);
+        });
+    });
+
+    document.querySelectorAll('.cw-deregister-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            cwDeregisterStudent(
+                parseInt(this.getAttribute('data-student-id')),
+                this.getAttribute('data-student-roll'),
+                this.getAttribute('data-student-name')
+            );
+        });
+    });
+}
+
+function cwLoadRegistrations() {
+    const session = cwEl('cwSession')?.value || '';
+    const year = cwEl('cwYear')?.value || '';
+    const term = cwEl('cwTerm')?.value || '';
+    const subjectEl = cwEl('cwSubject');
+    if (!subjectEl) return;
+
+    const courseCode = subjectEl.value;
+    const selectedOpt = subjectEl.options[subjectEl.selectedIndex];
+
+    if (!session || !year || !term || !courseCode) {
+        cwShowStatus('Please select Session, Year, Term, and Subject.', 'warning');
+        return;
+    }
+
+    const loadBtn = cwEl('cwLoadBtn');
+    if (loadBtn) {
+        loadBtn.disabled = true;
+        loadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Loading…';
+    }
+    cwHideStatus();
+
+    fetch('/course-management/coordinator/registrations/api/course-wise?session=' + encodeURIComponent(session) + '&year=' + encodeURIComponent(year) + '&term=' + encodeURIComponent(term) + '&course_code=' + encodeURIComponent(courseCode))
+        .then(async response => {
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                throw new Error('Server returned an invalid response. Please refresh and try again.');
+            }
+            if (!response.ok || !data.success) {
+                throw new Error(data?.message || ('Failed to load registrations (HTTP ' + response.status + ')'));
+            }
+            return data;
+        })
+        .then(data => {
+            const course = data.course || {};
+            if (!course.course_id && selectedOpt) {
+                course.course_id = selectedOpt.dataset.courseId || null;
+                course.course_name = course.course_name || selectedOpt.dataset.courseName || '';
+            }
+            data.course = course;
+            cwRenderStudents(data);
+        })
+        .catch(err => {
+            console.error(err);
+            cwShowStatus(err.message || 'Error loading registrations.', 'danger');
+        })
+        .finally(() => {
+            if (loadBtn) {
+                loadBtn.disabled = false;
+                loadBtn.innerHTML = '<i class="fas fa-search me-1"></i>Load';
+            }
+            cwUpdateLoadButtonState();
+        });
+}
+
+function cwDeregisterStudent(studentId, studentRoll, studentName) {
+    if (!cwCurrentData || !cwCurrentData.course) return;
+    const label = (studentRoll || '') + (studentName ? ' – ' + studentName : '');
+    if (!confirm('Are you sure you want to deregister ' + label + ' from ' + cwCurrentData.course.course_code + '?')) {
+        return;
+    }
+
+    fetch('/course-management/coordinator/register-student/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            course_id: cwCurrentData.course.course_id,
+            course_code: cwCurrentData.course.course_code,
+            course_name: cwCurrentData.course.course_name,
+            session: cwCurrentData.session,
+            year: cwCurrentData.year,
+            term: cwCurrentData.term,
+            remove_student_ids: [studentId]
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            cwShowStatus(data.message || 'Student deregistered successfully.', 'success');
+            cwLoadRegistrations();
+        } else {
+            cwShowStatus(data.message || 'Failed to deregister student.', 'danger');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        cwShowStatus('Error deregistering student.', 'danger');
+    });
+}
+
+function cwSaveChanges() {
+    if (!cwCurrentData || !cwCurrentData.students || !cwCurrentData.students.length) return;
+
+    const students = [];
+    document.querySelectorAll('#cwStudentsBody tr').forEach(row => {
+        const studentId = parseInt(row.getAttribute('data-student-id'));
+        const regId = row.getAttribute('data-registration-id');
+        const remarkSelect = row.querySelector('.cw-remark-select');
+        const remark = remarkSelect ? remarkSelect.value : 'Regular';
+        const isRetake = remark === 'Retake' || remark === 'Re-retake';
+        let carryOn = false;
+        if (isRetake) {
+            const carryCb = document.getElementById('cwCarry_' + regId);
+            carryOn = carryCb ? carryCb.checked : false;
+        }
+        const original = cwCurrentData.students.find(s => s.registration_id == regId);
+        const payload = {
+            student_id: studentId,
+            remark: remark,
+            carry_on: carryOn,
+            use_relevant_for_committee: original ? original.use_relevant_for_committee : true
+        };
+        if (original) {
+            payload.relevant_course_id = original.relevant_course_id;
+            payload.relevant_course_code = original.relevant_course_code;
+            payload.relevant_academic_session = original.relevant_academic_session;
+            payload.relevant_year = original.relevant_year;
+            payload.relevant_term = original.relevant_term;
+            payload.course_id = original.course_id;
+            payload.course_code = original.registered_course_code || cwCurrentData.course.course_code;
+            payload.course_name = original.registered_course_name || cwCurrentData.course.course_name;
+        }
+        students.push(payload);
+    });
+
+    const saveBtn = cwEl('cwSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+    }
+
+    const grouped = {};
+    students.forEach(item => {
+        const key = (item.course_code || cwCurrentData.course.course_code || '') + '::' + (item.course_id || cwCurrentData.course.course_id || '');
+        if (!grouped[key]) {
+            grouped[key] = {
+                course_id: item.course_id || cwCurrentData.course.course_id,
+                course_code: item.course_code || cwCurrentData.course.course_code,
+                course_name: item.course_name || cwCurrentData.course.course_name,
+                students: []
+            };
+        }
+        grouped[key].students.push({
+            student_id: item.student_id,
+            remark: item.remark,
+            carry_on: item.carry_on,
+            use_relevant_for_committee: item.use_relevant_for_committee,
+            relevant_course_id: item.relevant_course_id,
+            relevant_course_code: item.relevant_course_code,
+            relevant_academic_session: item.relevant_academic_session,
+            relevant_year: item.relevant_year,
+            relevant_term: item.relevant_term
+        });
+    });
+
+    Promise.all(Object.values(grouped).map(group => fetch('/course-management/coordinator/register-student/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            course_id: group.course_id,
+            course_code: group.course_code,
+            course_name: group.course_name,
+            session: cwCurrentData.session,
+            year: cwCurrentData.year,
+            term: cwCurrentData.term,
+            students: group.students
+        })
+    }).then(r => r.json())))
+    .then(results => {
+        const failed = results.find(r => !r.success);
+        if (failed) {
+            cwShowStatus(failed.message || 'Failed to save changes.', 'danger');
+            if (saveBtn) saveBtn.disabled = false;
+            return;
+        }
+        cwShowStatus('Registration updated successfully.', 'success');
+        cwLoadRegistrations();
+    })
+    .catch(err => {
+        console.error(err);
+        cwShowStatus('Error saving changes.', 'danger');
+        if (saveBtn) saveBtn.disabled = false;
+    })
+    .finally(() => {
+        if (saveBtn) saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Changes';
+    });
+}
+
+function initCourseWiseRegistration() {
+    const sessionEl = cwEl('cwSession');
+    if (!sessionEl) return;
+
+    sessionEl.addEventListener('change', function() {
+        const session = this.value;
+        cwResetYearTerm();
+        cwResetResultsView();
+        cwHideStatus();
+        if (!session) return;
+        cwLoadYearTermOptions(session);
+    });
+
+    cwEl('cwYear')?.addEventListener('change', function() {
+        const session = cwEl('cwSession')?.value || '';
+        const year = this.value;
+        const term = cwEl('cwTerm')?.value || '';
+        if (session && year && term) cwLoadSubjects();
+        else cwResetSubject();
+        cwUpdateLoadButtonState();
+    });
+
+    cwEl('cwTerm')?.addEventListener('change', function() {
+        const session = cwEl('cwSession')?.value || '';
+        const year = cwEl('cwYear')?.value || '';
+        const term = this.value;
+        if (session && year && term) cwLoadSubjects();
+        else cwResetSubject();
+        cwUpdateLoadButtonState();
+    });
+
+    cwEl('cwSubject')?.addEventListener('change', cwUpdateLoadButtonState);
+    cwEl('cwLoadBtn')?.addEventListener('click', cwLoadRegistrations);
+    cwEl('cwReloadBtn')?.addEventListener('click', cwLoadRegistrations);
+    cwEl('cwSaveBtn')?.addEventListener('click', cwSaveChanges);
+
+    const courseWiseTab = cwEl('course-wise-tab');
+    if (courseWiseTab) {
+        courseWiseTab.addEventListener('shown.bs.tab', function() {
+            const session = cwEl('cwSession')?.value || '';
+            const yearEl = cwEl('cwYear');
+            if (session && yearEl && yearEl.disabled) {
+                cwLoadYearTermOptions(session);
+            }
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initCourseWiseRegistration);
+{% endif %}
+</script>
+{% endblock %}

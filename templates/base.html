@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AMS KU">
+    <!-- Cache-Control meta tags to prevent browser caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>{% block title %}Academic Management System{% endblock %}</title>
+    <link rel="manifest" href="{{ url_for('web_manifest') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/KU_logo_2.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/KU_logo_2.png') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    {% block extra_css %}{% endblock %}
+    <style>
+        :root {
+            {% if current_user.is_authenticated and current_user.theme %}
+                {% if current_user.theme == 'blue' %}
+                    --theme-gradient: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%);
+                {% elif current_user.theme == 'sky' %}
+                    --theme-gradient: linear-gradient(135deg, #38bdf8 0%, #0284c7 50%, #0369a1 100%);
+                {% elif current_user.theme == 'cyan' %}
+                    --theme-gradient: linear-gradient(135deg, #22d3ee 0%, #0891b2 50%, #0e7490 100%);
+                {% elif current_user.theme == 'navy' %}
+                    --theme-gradient: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #172554 100%);
+                {% elif current_user.theme == 'indigo' %}
+                    --theme-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%);
+                {% elif current_user.theme == 'violet' %}
+                    --theme-gradient: linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #5b21b6 100%);
+                {% elif current_user.theme == 'green' %}
+                    --theme-gradient: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+                {% elif current_user.theme == 'emerald' %}
+                    --theme-gradient: linear-gradient(135deg, #34d399 0%, #059669 50%, #064e3b 100%);
+                {% elif current_user.theme == 'lime' %}
+                    --theme-gradient: linear-gradient(135deg, #84cc16 0%, #65a30d 50%, #4d7c0f 100%);
+                {% elif current_user.theme == 'teal' %}
+                    --theme-gradient: linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%);
+                {% elif current_user.theme == 'red' %}
+                    --theme-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+                {% elif current_user.theme == 'rose' %}
+                    --theme-gradient: linear-gradient(135deg, #fb7185 0%, #e11d48 50%, #be123c 100%);
+                {% elif current_user.theme == 'pink' %}
+                    --theme-gradient: linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%);
+                {% elif current_user.theme == 'orange' %}
+                    --theme-gradient: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+                {% elif current_user.theme == 'amber' %}
+                    --theme-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 50%, #b45309 100%);
+                {% elif current_user.theme == 'brown' %}
+                    --theme-gradient: linear-gradient(135deg, #a16207 0%, #854d0e 50%, #713f12 100%);
+                {% elif current_user.theme == 'slate' %}
+                    --theme-gradient: linear-gradient(135deg, #64748b 0%, #475569 50%, #334155 100%);
+                {% else %}
+                    --theme-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+                {% endif %}
+            {% else %}
+                --theme-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            {% endif %}
+        }
+        .navbar {
+            background: var(--theme-gradient) !important;
+        }
+        .card-header.bg-primary {
+            background: var(--theme-gradient) !important;
+        }
+        .btn-primary {
+            background: var(--theme-gradient) !important;
+            border: none;
+        }
+        .btn-primary:hover {
+            background: var(--theme-gradient) !important;
+            opacity: 0.9;
+        }
+        .window-nav-item .nav-link.window-pill-link {
+            padding: 0.25rem 0.4rem;
+            min-height: auto;
+            line-height: 1;
+        }
+        .window-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.28rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            line-height: 1.1;
+            color: #fff;
+        }
+        .window-pill i {
+            font-size: 0.68rem;
+            opacity: 0.9;
+        }
+        .window-nav-item .dropdown-toggle::after {
+            margin-left: 0.15rem;
+            vertical-align: 0.1em;
+            font-size: 0.55rem;
+        }
+    </style>
+    {% block force_scrolling_css %}{% endblock %}
+</head>
+<body data-active-endpoint="{{ request.endpoint or '' }}">
+    {% set is_admission_public = request.path.startswith('/admission-exam/apply/') %}
+    {% set admission_public_token = request.view_args.get('token') if is_admission_public and request.view_args else none %}
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-desktop d-none d-lg-block">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{% if admission_public_token %}{{ url_for('admission_exam.landing', token=admission_public_token) }}{% else %}{{ url_for('index') }}{% endif %}">
+                <img src="{{ url_for('static', filename='images/KU_logo_2.png') }}" alt="KU Logo" style="height: 50px; width: auto; margin-right: 12px;">
+                <span>Academic Management System</span>
+            </a>
+            <div class="navbar-collapse show" id="navbarNav">
+                {% if current_user.is_authenticated %}
+                {% set active_role = current_user.active_role %}
+                {% set head_active = (active_role == 'head') %}
+                {% set user_roles = parse_roles(current_user.role) %}
+                {% set can_view_question_bank = 'student' in user_roles or 'teacher' in user_roles or 'head' in user_roles or 'dean' in user_roles or 'teaching_assistant' in user_roles %}
+                <div class="flex-grow-1">
+                    <div class="d-none d-lg-flex align-items-center w-100">
+                        <ul class="navbar-nav me-auto">
+                            {% if has_teacher_privileges(current_user) or is_admin(current_user) or 'officer' in parse_roles(current_user.role) %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-compass me-2"></i>Modules
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ url_for('index') }}"><i class="fas fa-home me-2"></i>Dashboard</a></li>
+                                    {% if 'officer' in parse_roles(current_user.role) and not has_teacher_privileges(current_user) and not is_admin(current_user) %}
+                                    {% if show_view_routine|default(true) %}
+                                    <li><a class="dropdown-item" href="{{ url_for('routine_management.public_routines') }}"><i class="fas fa-calendar-check me-2"></i>View Routine</a></li>
+                                    {% endif %}
+                                    {% if show_academic_calendar|default(true) %}
+                                    <li><a class="dropdown-item" href="{{ url_for('academic_calendar.index') }}"><i class="fas fa-calendar me-2"></i>Academic Calendar</a></li>
+                                    {% endif %}
+                                    {% if show_officer_exam_info|default(false) %}
+                                    <li><a class="dropdown-item" href="{{ url_for('officer_exam_info') }}"><i class="fas fa-clipboard-list me-2"></i>Exam Info</a></li>
+                                    {% endif %}
+                                    {% if show_officer_leave_application|default(false) %}
+                                    <li><a class="dropdown-item" href="{{ url_for('leave_application.index') }}"><i class="fas fa-file-signature me-2"></i>Leave Application</a></li>
+                                    {% endif %}
+                                    {% if show_remuneration|default(false) %}
+                                    <li><a class="dropdown-item" href="{{ url_for('remuneration_portal') }}"><i class="fas fa-money-bill-wave me-2"></i>Remuneration</a></li>
+                                    {% endif %}
+                                    {% endif %}
+                                    {% if has_teacher_privileges(current_user) %}
+                                    {% if show_class_management %}
+                                    <li><a class="dropdown-item" href="{{ url_for('class_management.index') }}"><i class="fas fa-chalkboard-teacher me-2"></i>Class Management</a></li>
+                                    {% endif %}
+                                    {% if show_result_management %}
+                                    <li><a class="dropdown-item" href="{{ url_for('result_management.index') }}"><i class="fas fa-poll me-2"></i>Result Management</a></li>
+                                    {% endif %}
+                                    {% if show_routine_management %}
+                                    <li><a class="dropdown-item" href="{{ url_for('routine_management.index') }}"><i class="fas fa-calendar-alt me-2"></i>Routine Management</a></li>
+                                    {% endif %}
+                                    <li><a class="dropdown-item" href="{{ url_for('routine_management.view_routine') }}"><i class="fas fa-calendar-check me-2"></i>View Routine</a></li>
+                                    {% if show_exam_evaluation %}
+                                    <li><a class="dropdown-item" href="{{ url_for('exam_evaluation') }}"><i class="fas fa-file-alt me-2"></i>Exam Evaluation</a></li>
+                                    {% endif %}
+                                    {% if show_academic_calendar %}
+                                    <li><a class="dropdown-item" href="{{ url_for('academic_calendar.index') }}"><i class="fas fa-calendar-check me-2"></i>Academic Calendar</a></li>
+                                    {% endif %}
+                                    {% if show_students_management %}
+                                    <li><a class="dropdown-item" href="{{ url_for('student_management.index') }}"><i class="fas fa-users me-2"></i>Students</a></li>
+                                    {% endif %}
+                                    {% if show_curriculum_management %}
+                                    <li><a class="dropdown-item" href="{{ url_for('course_management.index') }}"><i class="fas fa-book me-2"></i>Curriculum Management</a></li>
+                                    {% endif %}
+                                    {% if show_curriculator|default(show_curriculum_management) %}
+                                    <li><a class="dropdown-item" href="{{ url_for('curriculator.index') }}"><i class="fas fa-book-open me-2"></i>Curriculator</a></li>
+                                    {% endif %}
+                                    {% if show_course_registration %}
+                                    <li><a class="dropdown-item" href="{{ url_for('course_management.coordinator_registrations') }}"><i class="fas fa-clipboard-check me-2"></i>Course Registration</a></li>
+                                    {% endif %}
+                                    {% if show_remuneration %}
+                                    <li><a class="dropdown-item" href="{{ url_for('remuneration_portal') }}"><i class="fas fa-money-bill-wave me-2"></i>Remuneration</a></li>
+                                    {% endif %}
+                                    {% if show_exam_committee_management %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('exam_committee_management') }}"><i class="fas fa-gavel me-2"></i>Exam Committee Management</a></li>
+                                    {% endif %}
+                                    {% if is_exam_committee_chief() or is_exam_committee_member() %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('exam_committee_chief_dashboard') }}"><i class="fas fa-gavel me-2"></i>Exam Committee Chief</a></li>
+                                    {% endif %}
+                                    {% endif %}
+                                    {% if is_admin(current_user) %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-user-shield me-2"></i>Admin</a></li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                            {% endif %}
+                            {% if 'student' in parse_roles(current_user.role) and not has_teacher_privileges(current_user) and not is_admin(current_user) %}
+                            <li class="nav-item">
+                                <a class="nav-link {{ 'active' if request.endpoint == 'student_dashboard' else '' }}" href="{{ url_for('student_dashboard') }}" style="white-space: nowrap;">
+                                    <i class="fas fa-home me-2"></i>Student Dashboard
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item">
+                                <a class="nav-link {{ 'active' if request.endpoint and 'class_management.my_invitations' in request.endpoint else '' }}" href="{{ url_for('class_management.my_invitations') }}" style="white-space: nowrap;">
+                                    <i class="fas fa-envelope-open-text me-2"></i>Invitations
+                                    {% if pending_invites_count and pending_invites_count > 0 %}
+                                        <span class="badge bg-warning text-dark ms-1">{{ pending_invites_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            {% if can_view_question_bank %}
+                            <li class="nav-item">
+                                <a class="nav-link {{ 'active' if request.endpoint and request.endpoint == 'class_management.question_bank' else '' }}" href="{{ url_for('class_management.question_bank') }}" style="white-space: nowrap;">
+                                    <i class="fas fa-book-reader me-2"></i>Question Bank
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <div class="navbar-nav ms-auto align-items-center d-flex flex-row">
+                            {% if current_operational_window %}
+                            <li class="nav-item window-nav-item {% if show_window_switcher %}dropdown{% endif %} me-2">
+                                {% if show_window_switcher and active_operational_windows %}
+                                <a class="nav-link dropdown-toggle text-white window-pill-link d-flex align-items-center"
+                                   href="#"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false"
+                                   title="{{ current_operational_window.name }}{% if current_operational_window.academic_session %} — {{ current_operational_window.academic_session }}{% endif %}">
+                                    <span class="window-pill">
+                                        <i class="fas fa-layer-group" aria-hidden="true"></i>
+                                        <span>W{{ current_operational_window.id }}</span>
+                                    </span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow py-1">
+                                    <li class="dropdown-header small text-muted py-1">Switch window</li>
+                                    {% for w in active_operational_windows %}
+                                    <li>
+                                        <form method="POST" action="{{ url_for('auth.set_window') }}">
+                                            <input type="hidden" name="window_id" value="{{ w.id }}">
+                                            <button type="submit" class="dropdown-item small {% if current_operational_window.id == w.id %}active{% endif %}">
+                                                <span class="fw-semibold">W{{ w.id }}</span>
+                                                <span class="text-muted"> — {{ w.name }}</span>
+                                                {% if w.academic_session %}<span class="text-muted"> ({{ w.academic_session }})</span>{% endif %}
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% else %}
+                                <span class="nav-link window-pill-link d-flex align-items-center py-0"
+                                      title="{{ current_operational_window.name }}{% if current_operational_window.academic_session %} — {{ current_operational_window.academic_session }}{% endif %}">
+                                    <span class="window-pill">
+                                        <i class="fas fa-layer-group" aria-hidden="true"></i>
+                                        <span>W{{ current_operational_window.id }}</span>
+                                    </span>
+                                </span>
+                                {% endif %}
+                            </li>
+                            {% endif %}
+                            {% if has_teacher_privileges(current_user) and show_class_management|default(false) %}
+                            <li class="nav-item dropdown me-2 me-lg-3">
+                                <a class="nav-link position-relative d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Question notifications" style="min-height: 44px;">
+                                    <i class="fas fa-bell fa-lg"></i>
+                                    {% if question_notification_count|default(0) > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ question_notification_count }}</span>
+                                    {% endif %}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 notification-dropdown" style="min-width: 320px; max-width: 380px; max-height: 70vh; overflow-y: auto;">
+                                    <li class="dropdown-header d-flex justify-content-between align-items-center border-bottom pb-2">
+                                        <span class="fw-bold"><i class="fas fa-question-circle me-2"></i>Course Questions</span>
+                                        {% if question_notification_count|default(0) > 0 %}
+                                        <span class="badge bg-primary">{{ question_notification_count }} new</span>
+                                        {% endif %}
+                                    </li>
+                                    {% if question_notifications|default([]) %}
+                                    {% for n in question_notifications %}
+                                    <li>
+                                        <a class="dropdown-item py-3 notification-item" href="{{ url_for('class_management.course_questions', session_id=n.session_id) }}">
+                                            <div class="d-flex">
+                                                <div class="flex-shrink-0 me-2 rounded-circle bg-primary bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-user-graduate text-primary"></i>
+                                                </div>
+                                                <div class="flex-grow-1 overflow-hidden">
+                                                    <div class="fw-semibold text-dark text-truncate">{{ n.subject }}</div>
+                                                    <small class="text-muted">{{ n.student_name }} · {{ n.course_label }}</small>
+                                                    <div class="small text-muted mt-0">{{ n.created_at|bd('%b %d, %I:%M %p') if n.created_at else '' }}</div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    {% if not loop.last %}<li><hr class="dropdown-divider my-0"></li>{% endif %}
+                                    {% endfor %}
+                                    <li><a class="dropdown-item text-center small text-primary py-2" href="{{ url_for('class_management.index') }}">View all in Class Management</a></li>
+                                    {% else %}
+                                    <li class="dropdown-item text-muted text-center py-4">No new questions</li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                            {% endif %}
+                            {% if current_user.is_authenticated and parse_roles(current_user.role) and 'student' in parse_roles(current_user.role) %}
+                            <li class="nav-item dropdown me-2 me-lg-3">
+                                <a class="nav-link position-relative d-flex align-items-center text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" style="min-height: 44px;">
+                                    <i class="fas fa-bell fa-lg"></i>
+                                    {% if student_notification_count|default(0) > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">{{ student_notification_count }}</span>
+                                    {% endif %}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 notification-dropdown" style="min-width: 320px; max-width: 380px; max-height: 70vh; overflow-y: auto;">
+                                    <li class="dropdown-header d-flex justify-content-between align-items-center border-bottom pb-2">
+                                        <span class="fw-bold"><i class="fas fa-bell me-2"></i>Notifications</span>
+                                        {% if student_notification_count|default(0) > 0 %}
+                                        <span class="badge bg-primary">{{ student_notification_count }} new</span>
+                                        {% endif %}
+                                    </li>
+                                    {% if student_notifications|default([]) %}
+                                    {% for n in student_notifications %}
+                                    <li>
+                                        <a class="dropdown-item py-3 notification-item" href="{{ url_for('class_management.student_notification_read', notification_id=n.id) }}">
+                                            <div class="d-flex">
+                                                <div class="flex-shrink-0 me-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; {% if n.type == 'question_reply' %}background-color: rgba(13, 110, 253, 0.2);{% elif n.type == 'marks_revealed' %}background-color: rgba(25, 135, 84, 0.2);{% elif n.type == 'notice' %}background-color: rgba(139, 90, 43, 0.2);{% else %}background-color: rgba(108, 117, 125, 0.2);{% endif %}">
+                                                    {% if n.type == 'question_reply' %}<i class="fas fa-reply text-primary"></i>{% elif n.type == 'marks_revealed' %}<i class="fas fa-chart-line text-success"></i>{% elif n.type == 'notice' %}<i class="fas fa-thumbtack" style="color:#8b5a2b;"></i>{% else %}<i class="fas fa-file-download text-secondary"></i>{% endif %}
+                                                </div>
+                                                <div class="flex-grow-1 overflow-hidden">
+                                                    <div class="fw-semibold text-dark text-truncate">{{ n.title }}</div>
+                                                    <div class="small text-muted mt-0">{{ n.created_at|bd('%b %d, %I:%M %p') if n.created_at else '' }}</div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    {% if not loop.last %}<li><hr class="dropdown-divider my-0"></li>{% endif %}
+                                    {% endfor %}
+                                    <li><a class="dropdown-item text-center small text-primary py-2" href="{{ url_for('class_management.student_notifications_page') }}">View all notifications</a></li>
+                                    <li><a class="dropdown-item text-center small text-primary py-2" href="{{ url_for('class_management.student_view_scores') }}">My Scores &amp; Courses</a></li>
+                                    {% else %}
+                                    <li class="dropdown-item text-muted text-center py-4">No new notifications</li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                            {% endif %}
+                            <a class="navbar-text me-2 me-lg-3 text-decoration-none text-white d-flex align-items-center" href="{{ url_for('profile') }}" style="white-space: nowrap; font-size: 0.9rem;">
+                                <i class="fas fa-user me-1"></i><span><span class="d-none d-sm-inline">Welcome,&nbsp;</span>{{ current_user.full_name or current_user.username }}</span>
+                            </a>
+                            <a class="nav-link d-flex align-items-center" href="{{ url_for('auth.logout') }}" style="white-space: nowrap; min-height: 44px; padding: 0.5rem 0.75rem;">
+                                <i class="fas fa-sign-out-alt me-1"></i><span class="d-none d-sm-inline">Logout</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% elif not is_admission_public %}
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="{{ url_for('auth.login') }}">
+                        <i class="fas fa-sign-in-alt me-1"></i>Login
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <header class="m-topbar d-lg-none">
+        <a class="m-topbar-brand" href="{% if admission_public_token %}{{ url_for('admission_exam.landing', token=admission_public_token) }}{% else %}{{ url_for('index') }}{% endif %}">
+            <img src="{{ url_for('static', filename='images/KU_logo_2.png') }}" alt="KU">
+            <span class="m-topbar-brand-text">AMS</span>
+        </a>
+        <span class="m-topbar-title">{% block mobile_title %}{% endblock %}</span>
+        <div class="m-topbar-actions">
+            {% if current_user.is_authenticated %}
+            {% if current_operational_window %}
+            {% if show_window_switcher and active_operational_windows %}
+            <div class="dropdown">
+                <button class="m-topbar-btn dropdown-toggle border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Switch window">
+                    <span class="window-pill"><i class="fas fa-layer-group"></i> W{{ current_operational_window.id }}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow py-1">
+                    {% for w in active_operational_windows %}
+                    <li>
+                        <form method="POST" action="{{ url_for('auth.set_window') }}">
+                            <input type="hidden" name="window_id" value="{{ w.id }}">
+                            <button type="submit" class="dropdown-item small {% if current_operational_window.id == w.id %}active{% endif %}">W{{ w.id }} — {{ w.name }}</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <span class="m-topbar-btn" title="{{ current_operational_window.name }}">
+                <span class="window-pill"><i class="fas fa-layer-group"></i> W{{ current_operational_window.id }}</span>
+            </span>
+            {% endif %}
+            {% endif %}
+            {% if has_teacher_privileges(current_user) and show_class_management|default(false) %}
+            <div class="dropdown">
+                <a class="m-topbar-btn dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Question notifications">
+                    <i class="fas fa-bell"></i>
+                    {% if question_notification_count|default(0) > 0 %}<span class="badge-dot">{{ question_notification_count }}</span>{% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow notification-dropdown">
+                    <li class="dropdown-header small fw-bold">Course Questions</li>
+                    {% if question_notifications|default([]) %}
+                    {% for n in question_notifications[:5] %}
+                    <li><a class="dropdown-item small py-2" href="{{ url_for('class_management.course_questions', session_id=n.session_id) }}">{{ n.subject }}</a></li>
+                    {% endfor %}
+                    <li><a class="dropdown-item small text-primary" href="{{ url_for('class_management.index') }}">View all</a></li>
+                    {% else %}
+                    <li class="dropdown-item small text-muted">No new questions</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            {% if current_user.is_authenticated and parse_roles(current_user.role) and 'student' in parse_roles(current_user.role) %}
+            <div class="dropdown">
+                <a class="m-topbar-btn dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                    <i class="fas fa-bell"></i>
+                    {% if student_notification_count|default(0) > 0 %}<span class="badge-dot">{{ student_notification_count }}</span>{% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow notification-dropdown">
+                    <li class="dropdown-header small fw-bold">Notifications</li>
+                    {% if student_notifications|default([]) %}
+                    {% for n in student_notifications[:5] %}
+                    <li><a class="dropdown-item small py-2" href="{{ url_for('class_management.student_notification_read', notification_id=n.id) }}">{{ n.title }}</a></li>
+                    {% endfor %}
+                    <li><a class="dropdown-item small text-primary" href="{{ url_for('class_management.student_notifications_page') }}">View all</a></li>
+                    {% else %}
+                    <li class="dropdown-item small text-muted">No new notifications</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            <button type="button" class="m-topbar-btn" id="mMenuBtn" aria-label="Open menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            {% elif not is_admission_public %}
+            <a class="m-topbar-btn" href="{{ url_for('auth.login') }}" title="Login"><i class="fas fa-sign-in-alt"></i></a>
+            {% endif %}
+        </div>
+    </header>
+
+    {% include 'partials/mobile_drawer.html' %}
+
+    <main class="m-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="m-flash-wrap container mt-lg-3 mt-0">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'info-circle' }} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer mt-auto py-3 bg-dark text-white">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start gap-2">
+            <span>&copy; 2025, Academic Management System (AMS), {{ tenant.display_with_university }}</span>
+            <span style="cursor: pointer; text-decoration: underline;" data-bs-toggle="modal" data-bs-target="#versionModal">Version 2.0.0</span>
+        </div>
+    </footer>
+
+    <!-- Version Info Modal: when hidden, modal and all descendants must not capture clicks (fixes Courses panel unresponsive) -->
+    <style>#versionModal[aria-hidden="true"], #versionModal[aria-hidden="true"] * { pointer-events: none !important; }</style>
+    <div class="modal fade" id="versionModal" tabindex="-1" aria-labelledby="versionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="versionModalLabel">
+                        <i class="fas fa-info-circle me-2"></i>About Academic Management System
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <h4 class="mb-3">Academic Management System Version 2.0.0</h4>
+                    </div>
+                    <div class="mb-4">
+                        <p class="text-muted">
+                            The AMS is designed and developed for the efficient management of the academic works of Khulna University.
+                        </p>
+                    </div>
+                    <div class="border-top pt-3">
+                        <p class="mb-2"><strong>Designed and Developed by:</strong></p>
+                        <p class="mb-0">Md. Yamin Rahman<br>
+                        <small class="text-muted">{{ tenant.developer_title or ('Assistant Professor, ' + tenant.display_with_university) }}</small></p>
+                    </div>
+                    <div class="border-top pt-3 mt-3">
+                        <p class="mb-0 text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-robot me-1"></i>Coded with generative Artificial Intelligence.
+                            </small>
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- CSRF header injection for fetch()/$.ajax() -->
+    <script src="{{ url_for('static', filename='js/csrf_fetch.js') }}"></script>
+    <!-- Socket.IO Client for WebSocket connections -->
+    <script>
+        // Initialize Socket.IO connection
+        let socket = null;
+        let socketConnected = false;
+        
+        {% if current_user.is_authenticated %}
+        // Only connect if user is authenticated
+        socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity
+        });
+        
+        socket.on('connect', function() {
+            console.log('WebSocket connected');
+            socketConnected = true;
+            // Update connection status if indicator exists
+            const statusIndicator = document.getElementById('ws-status');
+            if (statusIndicator) {
+                statusIndicator.className = 'badge bg-success';
+                statusIndicator.textContent = 'Live';
+            }
+        });
+        
+        socket.on('disconnect', function() {
+            // Only log disconnect if it was previously connected (reduce console noise)
+            if (socketConnected) {
+                console.log('WebSocket disconnected');
+            }
+            socketConnected = false;
+            const statusIndicator = document.getElementById('ws-status');
+            if (statusIndicator) {
+                statusIndicator.className = 'badge bg-danger';
+                statusIndicator.textContent = 'Offline';
+            }
+        });
+        
+        socket.on('connect_error', function(error) {
+            // Suppress repeated connection error logs
+            // Connection will automatically retry with polling fallback
+            socketConnected = false;
+        });
+        
+        socket.on('connected', function(data) {
+            console.log('Live updates enabled:', data.message);
+        });
+        
+        socket.on('attendance_updated', function(data) {
+            console.log('Attendance updated:', data);
+            // Dispatch custom event for pages to handle
+            window.dispatchEvent(new CustomEvent('ws:attendance_updated', { detail: data }));
+        });
+        
+        socket.on('assessment_updated', function(data) {
+            console.log('Assessment updated:', data);
+            window.dispatchEvent(new CustomEvent('ws:assessment_updated', { detail: data }));
+        });
+        
+        socket.on('course_outline_updated', function(data) {
+            console.log('Course outline updated:', data);
+            window.dispatchEvent(new CustomEvent('ws:course_outline_updated', { detail: data }));
+        });
+        
+        socket.on('session_created', function(data) {
+            console.log('Session created:', data);
+            window.dispatchEvent(new CustomEvent('ws:session_created', { detail: data }));
+        });
+        
+        socket.on('marks_updated', function(data) {
+            console.log('Marks updated:', data);
+            window.dispatchEvent(new CustomEvent('ws:marks_updated', { detail: data }));
+        });
+        
+        socket.on('result_updated', function(data) {
+            console.log('Result updated:', data);
+            window.dispatchEvent(new CustomEvent('ws:result_updated', { detail: data }));
+        });
+        
+        socket.on('routine_updated', function(data) {
+            console.log('Routine updated:', data);
+            window.dispatchEvent(new CustomEvent('ws:routine_updated', { detail: data }));
+        });
+        
+        socket.on('course_updated', function(data) {
+            console.log('Course updated:', data);
+            window.dispatchEvent(new CustomEvent('ws:course_updated', { detail: data }));
+        });
+        
+        socket.on('student_updated', function(data) {
+            console.log('Student updated:', data);
+            window.dispatchEvent(new CustomEvent('ws:student_updated', { detail: data }));
+        });
+        
+        // Helper functions for joining/leaving rooms
+        window.joinSessionRoom = function(sessionId) {
+            if (socket && socketConnected) {
+                socket.emit('join_session', { session_id: sessionId });
+            }
+        };
+        
+        window.leaveSessionRoom = function(sessionId) {
+            if (socket && socketConnected) {
+                socket.emit('leave_session', { session_id: sessionId });
+            }
+        };
+        
+        window.joinResultSessionRoom = function(sessionId) {
+            if (socket && socketConnected) {
+                socket.emit('join_result_session', { session_id: sessionId });
+            }
+        };
+        
+        window.leaveResultSessionRoom = function(sessionId) {
+            if (socket && socketConnected) {
+                socket.emit('leave_result_session', { session_id: sessionId });
+            }
+        };
+        {% endif %}
+    </script>
+    <!-- Debug Script for Form Monitoring -->
+    <script src="{{ url_for('static', filename='js/debug.js') }}"></script>
+    <!-- Custom App-wide JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mobile-shell.js') }}"></script>
+    
+    <!-- Page-specific scripts -->
+    {% block scripts %}{% endblock %}
+    
+    <!-- Service Worker Registration for PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html> 

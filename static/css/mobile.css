@@ -1,0 +1,2232 @@
+/* Facebook-inspired mobile shell — portrait-first, max-width 991.98px only */
+
+:root {
+    --m-topbar-height: 52px;
+    --m-canvas: #f0f2f5;
+    --m-card-bg: #ffffff;
+    --m-card-radius: 8px;
+    --m-gutter: 8px;
+    --m-text: 15px;
+    --m-line: 1.35;
+    --m-drawer-width: min(320px, 88vw);
+    --m-touch: 40px;
+    --m-card-pad: 0.75rem;
+    --m-header-pad: 0.65rem 0.85rem;
+}
+
+@media (max-width: 991.98px) {
+    body.m-shell {
+        background: var(--m-canvas) !important;
+        font-size: var(--m-text);
+        line-height: var(--m-line);
+        padding-top: calc(var(--m-topbar-height) + env(safe-area-inset-top, 0px));
+        overflow-x: hidden;
+    }
+
+    body.m-shell.m-drawer-open {
+        overflow: hidden;
+        touch-action: none;
+    }
+
+    /* Hide legacy desktop navbar on mobile */
+    body.m-shell .navbar.navbar-desktop {
+        display: none !important;
+    }
+
+    /* ---- Top bar ---- */
+    .m-topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1040;
+        height: calc(var(--m-topbar-height) + env(safe-area-inset-top, 0px));
+        padding-top: env(safe-area-inset-top, 0px);
+        background: var(--theme-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding-left: max(var(--m-gutter), env(safe-area-inset-left, 0px));
+        padding-right: max(var(--m-gutter), env(safe-area-inset-right, 0px));
+    }
+
+    .m-topbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: #fff;
+        text-decoration: none;
+        flex-shrink: 0;
+        min-width: 0;
+    }
+
+    .m-topbar-brand img {
+        height: 32px;
+        width: auto;
+    }
+
+    .m-topbar-brand-text {
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 0.02em;
+    }
+
+    .m-topbar-title {
+        flex: 1;
+        min-width: 0;
+        text-align: center;
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0 0.25rem;
+    }
+
+    .m-topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.15rem;
+        flex-shrink: 0;
+    }
+
+    .m-topbar-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: transparent;
+        color: #fff;
+        border-radius: 50%;
+        font-size: 1.15rem;
+        position: relative;
+        text-decoration: none;
+        padding: 0;
+    }
+
+    .m-topbar-btn:active {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .m-topbar-btn .badge-dot {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        font-size: 0.65rem;
+        line-height: 16px;
+        border-radius: 999px;
+        background: #e41e3f;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .m-topbar .window-pill {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.45rem;
+    }
+
+    /* ---- Drawer ---- */
+    .m-drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1045;
+        background: rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.22s ease, visibility 0.22s ease;
+    }
+
+    .m-drawer-backdrop.is-open {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .m-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1050;
+        width: var(--m-drawer-width);
+        max-width: 100%;
+        background: #fff;
+        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+        transform: translateX(100%);
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .m-drawer.is-open {
+        transform: translateX(0);
+    }
+
+    .m-drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e4e6eb;
+        background: var(--theme-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+        color: #fff;
+    }
+
+    .m-drawer-user {
+        min-width: 0;
+    }
+
+    .m-drawer-user-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .m-drawer-user-sub {
+        font-size: 0.75rem;
+        opacity: 0.9;
+    }
+
+    .m-drawer-close {
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .m-drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.5rem 0;
+    }
+
+    .m-drawer-section {
+        padding: 0.35rem 0.75rem 0.15rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #65676b;
+    }
+
+    .m-drawer-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.65rem 1rem;
+        color: #050505;
+        text-decoration: none;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        min-height: 44px;
+        border-left: 3px solid transparent;
+    }
+
+    .m-drawer-link i {
+        width: 1.25rem;
+        text-align: center;
+        color: #65676b;
+        font-size: 1rem;
+    }
+
+    .m-drawer-link:hover,
+    .m-drawer-link:focus {
+        background: #f0f2f5;
+        color: #050505;
+    }
+
+    .m-drawer-link.is-active {
+        background: #e7f3ff;
+        border-left-color: #1877f2;
+        color: #1877f2;
+    }
+
+    .m-drawer-link.is-active i {
+        color: #1877f2;
+    }
+
+    .m-drawer-footer {
+        border-top: 1px solid #e4e6eb;
+        padding: 0.5rem 0.75rem 0.75rem;
+    }
+
+    .m-drawer-footer .m-drawer-link {
+        color: #dc3545;
+    }
+
+    .m-drawer-footer .m-drawer-link i {
+        color: #dc3545;
+    }
+
+    /* ---- Main content feed layout ---- */
+    main.m-main {
+        min-height: calc(100vh - var(--m-topbar-height) - 60px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    main.m-main > .container,
+    main.m-main > .container-fluid,
+    body.m-shell .container,
+    body.m-shell .container-fluid {
+        padding-left: var(--m-gutter);
+        padding-right: var(--m-gutter);
+        max-width: 100%;
+    }
+
+    body.m-shell .m-flash-wrap {
+        padding: var(--m-gutter) var(--m-gutter) 0;
+    }
+
+    body.m-shell .m-flash-wrap .alert {
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        font-size: 0.875rem;
+        padding: 0.65rem 0.85rem;
+    }
+
+    /* Feed-style cards */
+    body.m-shell .card,
+    body.m-shell .management-card,
+    body.m-shell .dashboard-card,
+    body.m-shell .module-card {
+        border-radius: var(--m-card-radius) !important;
+        border: none !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        margin-bottom: var(--m-gutter);
+        background: var(--m-card-bg);
+    }
+
+    body.m-shell .card-header {
+        padding: 0.65rem 0.85rem !important;
+        font-size: 0.9rem !important;
+        border-radius: var(--m-card-radius) var(--m-card-radius) 0 0 !important;
+    }
+
+    body.m-shell .card-body {
+        padding: 0.75rem !important;
+    }
+
+    body.m-shell .management-card:hover,
+    body.m-shell .dashboard-card:hover {
+        transform: none;
+    }
+
+    body.m-shell .module-wrapper::before {
+        display: none;
+    }
+
+    body.m-shell .module-wrapper {
+        padding: var(--m-gutter) 0 1.5rem !important;
+    }
+
+    body.m-shell .dashboard-wrapper {
+        background: var(--m-canvas) !important;
+        padding: var(--m-gutter) 0 1.5rem !important;
+        min-height: auto;
+    }
+
+    body.m-shell .dashboard-wrapper::before {
+        display: none;
+    }
+
+    body.m-shell .dashboard-header {
+        padding: 0.75rem 0;
+        margin-bottom: 0.75rem;
+    }
+
+    body.m-shell .dashboard-header h1 {
+        font-size: 1.25rem !important;
+    }
+
+    body.m-shell .dashboard-card {
+        min-height: 100px;
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    body.m-shell .dashboard-card .icon-circle {
+        width: 36px;
+        height: 36px;
+        margin-bottom: 0.5rem;
+    }
+
+    body.m-shell .dashboard-card .card-label {
+        font-size: 0.75rem !important;
+    }
+
+    /* Class management session feed */
+    body.m-shell .session-card,
+    body.m-shell .class-session-item {
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+    }
+
+    /* Curriculum sidebar stacks on top */
+    body.m-shell .curriculum-sidebar {
+        position: static !important;
+        width: 100% !important;
+        max-height: none !important;
+        margin-bottom: var(--m-gutter);
+    }
+
+    body.m-shell .curriculum-main {
+        width: 100% !important;
+    }
+
+    body.m-shell .module-wrapper .row.g-4 > [class*="col-lg-"] {
+        margin-bottom: 0;
+    }
+
+    /* Tables */
+    body.m-shell .table-responsive {
+        border-radius: var(--m-card-radius);
+        background: #fff;
+        margin-bottom: var(--m-gutter);
+    }
+
+    body.m-shell .table th,
+    body.m-shell .table td {
+        font-size: 0.8rem;
+        padding: 0.45rem 0.35rem;
+    }
+
+    body.m-shell .table-mobile-stack thead {
+        display: none;
+    }
+
+    body.m-shell .table-mobile-stack tbody tr {
+        display: block;
+        background: #fff;
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        padding: 0.65rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e4e6eb !important;
+    }
+
+    body.m-shell .table-mobile-stack tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+        border: none !important;
+        padding: 0.35rem 0 !important;
+        white-space: normal !important;
+        text-align: right !important;
+    }
+
+    body.m-shell .table-mobile-stack tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #65676b;
+        font-size: 0.75rem;
+        text-align: left;
+        flex-shrink: 0;
+        max-width: 45%;
+    }
+
+    /* Modals — bottom sheet feel */
+    body.m-shell .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+        align-items: flex-end;
+    }
+
+    body.m-shell .modal-dialog-centered {
+        align-items: center;
+    }
+
+    body.m-shell .modal-content {
+        border-radius: 12px 12px 0 0;
+    }
+
+    body.m-shell .modal-dialog-centered .modal-content {
+        border-radius: 12px;
+    }
+
+    /* Footer compact */
+    body.m-shell .footer {
+        margin-top: 1rem;
+        padding: 0.75rem var(--m-gutter);
+        font-size: 0.75rem;
+    }
+
+    /* Result management index */
+    body.m-shell .rm-index-wrapper {
+        padding: var(--m-gutter) 0 !important;
+    }
+
+    /* Notification dropdown on mobile topbar */
+    body.m-shell .m-topbar .dropdown-menu {
+        position: fixed !important;
+        top: calc(var(--m-topbar-height) + env(safe-area-inset-top, 0px) + 4px) !important;
+        left: var(--m-gutter) !important;
+        right: var(--m-gutter) !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+    }
+
+    /* Login standalone mobile */
+    body.m-auth-page {
+        background: var(--m-canvas) !important;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--m-gutter);
+    }
+
+    body.m-auth-page .login-container {
+        max-width: 400px;
+        width: 100%;
+    }
+
+    body.m-auth-page .university-header .university-title,
+    body.m-auth-page .university-header .university-subtitle {
+        color: #050505;
+        text-shadow: none;
+    }
+
+    body.m-auth-page .login-card,
+    body.m-auth-page .card.shadow {
+        border-radius: var(--m-card-radius);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Class management session rows as feed cards */
+    body.m-shell .cm-sessions-table thead {
+        display: none;
+    }
+
+    body.m-shell .cm-sessions-table .session-row {
+        display: block;
+        background: #fff;
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        padding: 0.55rem 0.7rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e4e6eb !important;
+    }
+
+    body.m-shell .cm-sessions-table .session-row td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        border: none !important;
+        padding: 0.22rem 0 !important;
+        white-space: normal !important;
+        text-align: right !important;
+        font-size: 0.82rem;
+    }
+
+    /* Hide serial # on mobile cards */
+    body.m-shell .cm-sessions-table .session-row td:nth-child(1) {
+        display: none;
+    }
+
+    body.m-shell .cm-sessions-table .session-row td:nth-child(2) {
+        display: block;
+        text-align: left !important;
+        font-size: 0.92rem;
+        padding-bottom: 0.4rem !important;
+        border-bottom: 1px solid #f0f2f5 !important;
+        margin-bottom: 0.2rem;
+    }
+
+    body.m-shell .cm-sessions-table .session-row td:nth-child(2)::before {
+        content: none;
+    }
+
+    body.m-shell .cm-sessions-table .session-row td:nth-child(3)::before { content: "Code"; }
+    body.m-shell .cm-sessions-table .session-row td:nth-child(4)::before { content: "Scope"; }
+    body.m-shell .cm-sessions-table .session-row td:nth-child(5)::before { content: "Year"; }
+    body.m-shell .cm-sessions-table .session-row td:nth-child(6)::before { content: "Term"; }
+    body.m-shell .cm-sessions-table .session-row td:nth-child(7)::before { content: "Session"; }
+    body.m-shell .cm-sessions-table .session-row td:nth-child(8)::before { content: "Batch"; }
+    body.m-shell .cm-sessions-table .session-row td:nth-child(9)::before { content: "Created"; }
+
+    body.m-shell .cm-sessions-table .session-row td::before {
+        font-weight: 600;
+        color: #65676b;
+        font-size: 0.72rem;
+        text-align: left;
+        flex-shrink: 0;
+    }
+
+    body.m-shell .cm-sessions-table .session-row .badge {
+        font-size: 0.72rem;
+        padding: 0.28em 0.5em;
+    }
+
+    body.m-shell .module-header {
+        padding: 0.85rem !important;
+        margin-bottom: 0.75rem !important;
+        border-radius: var(--m-card-radius) !important;
+    }
+
+    body.m-shell .module-header h4 {
+        font-size: 1.05rem !important;
+    }
+
+    body.m-shell .module-header .m-action-row,
+    body.m-shell .module-header .d-flex.flex-column.gap-2 {
+        width: 100%;
+        margin-top: 0 !important;
+    }
+
+    body.m-shell .module-header .btn {
+        min-height: var(--m-touch);
+        font-size: 0.82rem !important;
+    }
+
+    body.m-shell .module-wrapper {
+        padding: 0.5rem 0 1rem !important;
+        min-height: auto !important;
+    }
+
+    body.m-shell .cm-sessions-table .course-actions-row {
+        display: block;
+        margin-bottom: var(--m-gutter);
+        border: none !important;
+    }
+
+    body.m-shell .cm-sessions-table .course-actions-row > td {
+        display: block;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    body.m-shell .cm-sessions-table .course-actions-row .btn,
+    body.m-shell .cm-sessions-table .course-actions-row a.btn {
+        min-height: var(--m-touch);
+        font-size: 0.78rem !important;
+        margin: 0.15rem 0.1rem;
+    }
+
+    body.m-shell .cm-active-courses-section .card-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        border-radius: var(--m-card-radius) var(--m-card-radius) 0 0 !important;
+    }
+
+    body.m-shell .cm-active-courses-section .card-header .btn {
+        min-height: var(--m-touch);
+    }
+
+    /* Dashboard 2-column module grid */
+    body.m-shell .dashboard-wrapper .row.g-3 > [class*="col-"],
+    body.m-shell .dashboard-wrapper .row.g-4 > [class*="col-"] {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    body.m-shell .sidebar-wrapper {
+        order: -1;
+        margin-bottom: var(--m-gutter);
+    }
+
+    body.m-shell .content-wrapper.bg-light {
+        background: transparent !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    body.m-shell.m-auth-page {
+        padding-top: calc(var(--m-topbar-height) + env(safe-area-inset-top, 0px));
+    }
+
+    body.m-shell.m-auth-page .login-container,
+    body.m-shell.m-auth-page .container > .row {
+        width: 100%;
+    }
+
+    /* ========== MODULE-WIDE PAGE CHROME ========== */
+    body.m-shell .container.mt-4,
+    body.m-shell .container.mt-5 {
+        margin-top: 0.5rem !important;
+    }
+
+    body.m-shell main.m-main > .container > .d-flex.justify-content-between,
+    body.m-shell .container > .d-flex.justify-content-between.mb-3:first-child,
+    body.m-shell .card-header.d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.5rem;
+    }
+
+    body.m-shell .card-header .btn,
+    body.m-shell .container > .d-flex.justify-content-between .btn {
+        width: 100%;
+    }
+
+    body.m-shell .module-card .card-header .d-flex.gap-2 {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    body.m-shell .module-card .card-header .btn {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Action tile grid (evaluation hub, etc.) */
+    body.m-shell .m-action-tile-grid,
+    body.m-shell .row.g-3:has(.action-tile) {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--m-gutter);
+    }
+
+    body.m-shell .m-action-tile-grid > [class*="col-"],
+    body.m-shell .row.g-3:has(.action-tile) > [class*="col-"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    body.m-shell .action-tile {
+        min-height: 100px;
+        padding: 0.65rem !important;
+        border-radius: var(--m-card-radius);
+    }
+
+    body.m-shell .action-tile .tile-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+
+    body.m-shell .action-tile h6 {
+        font-size: 0.8rem;
+    }
+
+    body.m-shell .action-tile p {
+        font-size: 0.7rem !important;
+    }
+
+    /* ========== Compact page chrome helpers ========== */
+    body.m-shell .m-page-header,
+    body.m-shell .card-header.m-page-header {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.5rem;
+        padding: var(--m-header-pad) !important;
+    }
+
+    body.m-shell .m-page-header .card-title,
+    body.m-shell .m-page-header h5,
+    body.m-shell .m-page-header h4 {
+        font-size: 0.95rem !important;
+        line-height: 1.35;
+        white-space: normal;
+        word-break: break-word;
+        margin-bottom: 0 !important;
+    }
+
+    body.m-shell .m-page-header .badge {
+        display: inline-block;
+        margin: 0.25rem 0 0 !important;
+        font-size: 0.72rem;
+        font-weight: 600;
+        vertical-align: middle;
+    }
+
+    body.m-shell .m-action-row {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    body.m-shell .m-action-row > .btn,
+    body.m-shell .m-action-row > a.btn,
+    body.m-shell .m-action-row > .r-btn,
+    body.m-shell .m-action-row > a.r-btn {
+        flex: 1 1 calc(50% - 0.4rem);
+        min-width: 0;
+        min-height: var(--m-touch);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem !important;
+        padding: 0.4rem 0.55rem !important;
+        white-space: nowrap;
+    }
+
+    body.m-shell .m-action-row > .btn.m-action-full,
+    body.m-shell .m-action-row > a.btn.m-action-full {
+        flex: 1 1 100%;
+    }
+
+    body.m-shell .r-toolbar.m-page-header {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    body.m-shell .r-toolbar .r-progress {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    body.m-shell .m-switch-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem 0.65rem;
+        width: 100%;
+    }
+
+    body.m-shell .m-switch-grid > [class*="col-"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
+        padding: 0 !important;
+    }
+
+    body.m-shell .m-switch-grid .form-check.form-switch {
+        display: flex;
+        align-items: center;
+        min-height: var(--m-touch);
+        padding-left: 2.6em;
+        margin-bottom: 0;
+        gap: 0.35rem;
+    }
+
+    body.m-shell .m-switch-grid .form-check-input {
+        width: 2.4em;
+        height: 1.25em;
+        margin-top: 0;
+        cursor: pointer;
+    }
+
+    body.m-shell .m-switch-grid .form-check-label {
+        font-size: 0.82rem;
+        line-height: 1.25;
+    }
+
+    body.m-shell .m-switch-grid > .col-12,
+    body.m-shell .m-switch-grid > .border-top {
+        grid-column: 1 / -1;
+    }
+
+    body.m-shell .card-body {
+        padding: var(--m-card-pad) !important;
+    }
+
+    body.m-shell .card-header {
+        padding: var(--m-header-pad) !important;
+    }
+
+    /* Sticky first-column table scroll */
+    body.m-shell .m-table-scroll-sticky,
+    body.m-shell .table-responsive.m-table-scroll-sticky {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: var(--m-card-radius);
+        background: #fff;
+        margin-bottom: var(--m-gutter);
+        /* Scroll edge hint */
+        background-image:
+            linear-gradient(to right, #fff, #fff),
+            linear-gradient(to right, #fff, #fff),
+            linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent),
+            linear-gradient(to left, rgba(0, 0, 0, 0.08), transparent);
+        background-position: left center, right center, left center, right center;
+        background-repeat: no-repeat;
+        background-size: 24px 100%, 24px 100%, 12px 100%, 12px 100%;
+        background-attachment: local, local, scroll, scroll;
+    }
+
+    body.m-shell .m-table-scroll-sticky table th:first-child,
+    body.m-shell .m-table-scroll-sticky table td:first-child,
+    body.m-shell .table-responsive.m-table-scroll-sticky table th:first-child,
+    body.m-shell .table-responsive.m-table-scroll-sticky table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #fff;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Freeze multiple leading columns when present */
+    body.m-shell .m-table-scroll-sticky .freeze-col-1,
+    body.m-shell .table-responsive.m-table-scroll-sticky .freeze-col-1 {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 3;
+    }
+
+    body.m-shell .m-table-scroll-sticky .freeze-col-2,
+    body.m-shell .table-responsive.m-table-scroll-sticky .freeze-col-2 {
+        position: sticky !important;
+        left: 36px !important;
+        z-index: 3;
+    }
+
+    body.m-shell .m-table-scroll-sticky .freeze-col-3,
+    body.m-shell .table-responsive.m-table-scroll-sticky .freeze-col-3 {
+        position: sticky !important;
+        left: 108px !important;
+        z-index: 3;
+        box-shadow: 3px 0 6px rgba(0, 0, 0, 0.08);
+    }
+
+    body.m-shell .m-table-scroll-sticky thead .freeze-col-1,
+    body.m-shell .m-table-scroll-sticky thead .freeze-col-2,
+    body.m-shell .m-table-scroll-sticky thead .freeze-col-3 {
+        z-index: 4;
+        background: #222 !important;
+        color: #fff;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table thead th:first-child,
+    body.m-shell .m-table-scroll-sticky .attendance-table tbody td:first-child {
+        background: #f8f9fa;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table thead th {
+        background: #222;
+        color: #fff;
+        font-size: 0.7rem;
+        padding: 5px 3px;
+        white-space: nowrap;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table td {
+        padding: 5px 3px;
+        font-size: 0.78rem;
+    }
+
+    /* Keep data-entry grids tabular — do not card-stack */
+    body.m-shell .m-table-scroll-sticky table.table-sm,
+    body.m-shell .m-table-scroll-sticky .attendance-table,
+    body.m-shell .table-responsive.m-table-scroll-sticky table.table-sm {
+        font-size: 0.78rem;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.table-sm thead,
+    body.m-shell .table-responsive.m-table-scroll-sticky table.table-sm thead {
+        display: table-header-group !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.table-sm tbody tr,
+    body.m-shell .table-responsive.m-table-scroll-sticky table.table-sm tbody tr {
+        display: table-row !important;
+        border: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        background: inherit;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.table-sm tbody td,
+    body.m-shell .table-responsive.m-table-scroll-sticky table.table-sm tbody td {
+        display: table-cell !important;
+        border: 1px solid #dee2e6 !important;
+        padding: 0.35rem 0.3rem !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.table-sm tbody td::before,
+    body.m-shell .table-responsive.m-table-scroll-sticky table.table-sm tbody td::before {
+        content: none !important;
+        display: none !important;
+    }
+
+    /* Assessment marks grid */
+    body.m-shell .assessment-input-field {
+        width: 100% !important;
+        min-width: 56px !important;
+        max-width: 72px !important;
+        font-size: 16px !important;
+        padding: 0.35rem 0.25rem !important;
+        min-height: var(--m-touch) !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.table-bordered td .d-flex,
+    body.m-shell .m-table-scroll-sticky td .d-flex.flex-column,
+    body.m-shell .m-table-scroll-sticky td .form-check {
+        flex-direction: column;
+        gap: 0.2rem;
+        align-items: center;
+        margin: 0;
+        min-height: auto;
+    }
+
+    body.m-shell .m-table-scroll-sticky .form-check-input {
+        width: 1.15rem;
+        height: 1.15rem;
+        margin-top: 0;
+    }
+
+    body.m-shell .m-table-scroll-sticky .form-check-label {
+        font-size: 0.68rem;
+        line-height: 1.2;
+    }
+
+    body.m-shell .table.table-bordered th,
+    body.m-shell .table.table-bordered td {
+        padding: 0.4rem 0.3rem !important;
+        font-size: 0.78rem;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    body.m-shell .card.mb-3 .row.g-3 .col-md-3,
+    body.m-shell .card.mb-3 .row.g-3 .col-md-6 {
+        width: 100%;
+    }
+
+    body.m-shell .d-flex.gap-2.mt-3 {
+        flex-direction: column;
+    }
+
+    body.m-shell .d-flex.gap-2.mt-3 .btn {
+        width: 100%;
+    }
+
+    /* Exam evaluation card-stack tables (exclude sticky data grids) */
+    body.m-shell .table.table-sm:not(.m-keep-table):not(.attendance-table) {
+        font-size: 0.85rem;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) thead {
+        display: none;
+    }
+
+    body.m-shell .m-table-scroll-sticky .table.table-sm thead,
+    body.m-shell .table-responsive.m-table-scroll-sticky .table.table-sm thead {
+        display: table-header-group !important;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr:not(.table-light) {
+        display: block;
+        border: 1px solid #e4e6eb;
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        padding: 0.65rem 0.75rem;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    body.m-shell .m-table-scroll-sticky .table.table-sm tbody tr,
+    body.m-shell .table-responsive.m-table-scroll-sticky .table.table-sm tbody tr {
+        display: table-row !important;
+        border: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr:not(.table-light) td {
+        display: block;
+        border: none !important;
+        padding: 0.35rem 0 !important;
+        text-align: left !important;
+        white-space: normal !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky .table.table-sm tbody td,
+    body.m-shell .table-responsive.m-table-scroll-sticky .table.table-sm tbody td {
+        display: table-cell !important;
+        border: 1px solid #dee2e6 !important;
+        padding: 0.35rem 0.3rem !important;
+        white-space: nowrap !important;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr:not(.table-light) td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        display: block;
+        margin-bottom: 0.15rem;
+        color: #65676b;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr:not(.table-light) td[data-label=""]::before,
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr:not(.table-light) td:not([data-label])::before {
+        content: none;
+    }
+
+    body.m-shell .m-table-scroll-sticky .table.table-sm tbody td::before,
+    body.m-shell .table-responsive.m-table-scroll-sticky .table.table-sm tbody td::before {
+        content: none !important;
+        display: none !important;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr.table-light {
+        display: block;
+        border: none;
+        padding: 0;
+        margin-bottom: var(--m-gutter);
+        background: transparent;
+        box-shadow: none;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr.table-light td {
+        display: block;
+        border: none !important;
+        padding: 0.35rem 0 !important;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr.table-light .d-flex {
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    body.m-shell .table.table-sm:not(.m-keep-table) tbody tr.table-light .btn {
+        width: 100%;
+    }
+
+    /* Evaluation score tables */
+    body.m-shell .evaluation-score-table {
+        font-size: 0.8rem;
+    }
+
+    body.m-shell .evaluation-score-table input[type="radio"] {
+        transform: scale(1.5);
+        margin: 8px 6px;
+    }
+
+    /* Result management */
+    body.m-shell .rm-index-wrapper,
+    body.m-shell .rm-table-feed {
+        padding: var(--m-gutter) 0 !important;
+    }
+
+    body.m-shell .rm-table-feed .table thead {
+        display: none;
+    }
+
+    body.m-shell .rm-table-feed .table tbody tr {
+        display: block;
+        background: #fff;
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        padding: 0.65rem;
+        border: 1px solid #e4e6eb !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    body.m-shell .rm-table-feed .table tbody td {
+        display: flex;
+        justify-content: space-between;
+        border: none !important;
+        padding: 0.3rem 0 !important;
+        font-size: 0.8rem;
+    }
+
+    body.m-shell .rm-table-feed .table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #65676b;
+        font-size: 0.72rem;
+        margin-right: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    /* Routine timetable */
+    body.m-shell .routine-table-container,
+    body.m-shell .routine-table-wrapper,
+    body.m-shell .timetable {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.m-shell #subjects-sidebar {
+        margin-bottom: var(--m-gutter);
+        order: -1;
+    }
+
+    body.m-shell .timetable th,
+    body.m-shell .timetable td {
+        font-size: 0.7rem;
+        min-width: 56px;
+    }
+
+    /* Academic calendar */
+    body.m-shell .calendar-toolbar,
+    body.m-shell .fc-toolbar {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    body.m-shell .event-list-item,
+    body.m-shell .list-group-item {
+        border-radius: var(--m-card-radius);
+        margin-bottom: 0.35rem;
+    }
+
+    /* Question bank */
+    body.m-shell .qb-folder-tree {
+        font-size: 0.85rem;
+    }
+
+    body.m-shell .qb-folder-meta.qb-hide-mobile {
+        display: none !important;
+    }
+
+    /* Remuneration (991px alignment) */
+    body.m-shell .rem-wrapper {
+        padding: var(--m-gutter) !important;
+    }
+
+    body.m-shell .rem-sheet {
+        padding: 0.75rem !important;
+    }
+
+    body.m-shell .rem-heading {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+
+    body.m-shell .rem-table thead {
+        display: none;
+    }
+
+    body.m-shell .rem-table tbody tr {
+        display: block;
+        border: 1px solid #e4e6eb;
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        padding: 0.65rem;
+        background: #fff;
+    }
+
+    body.m-shell .rem-table tbody td {
+        display: block;
+        border: none !important;
+        padding: 0.35rem 0 !important;
+        position: relative;
+        padding-left: 42% !important;
+        text-align: left !important;
+        min-height: 36px;
+    }
+
+    body.m-shell .rem-table tbody td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 40%;
+        font-weight: 600;
+        font-size: 0.72rem;
+        color: #65676b;
+    }
+
+    body.m-shell .forms-table thead {
+        display: none;
+    }
+
+    body.m-shell .forms-table tbody tr {
+        display: block;
+        border: 1px solid #e4e6eb;
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        padding: 0.65rem;
+        background: #fff;
+    }
+
+    body.m-shell .forms-table tbody td {
+        display: block;
+        border: none !important;
+        padding: 0.35rem 0 0.35rem 42% !important;
+        position: relative;
+        text-align: left !important;
+    }
+
+    body.m-shell .forms-table tbody td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 40%;
+        font-weight: 600;
+        font-size: 0.72rem;
+        color: #65676b;
+    }
+
+    body.m-shell .forms-table .action-buttons,
+    body.m-shell .forms-table .btn-action {
+        width: 100%;
+    }
+
+    /* Admin / student list generic ops tables */
+    body.m-shell .student-mgmt-table tbody tr,
+    body.m-shell .admin-ops-table tbody tr {
+        display: block;
+        background: #fff;
+        border-radius: var(--m-card-radius);
+        margin-bottom: var(--m-gutter);
+        padding: 0.65rem;
+        border: 1px solid #e4e6eb;
+    }
+
+    body.m-shell .student-mgmt-table thead,
+    body.m-shell .admin-ops-table thead {
+        display: none;
+    }
+
+    body.m-shell .student-mgmt-table tbody td,
+    body.m-shell .admin-ops-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        border: none !important;
+        padding: 0.3rem 0 !important;
+        font-size: 0.8rem;
+    }
+
+    body.m-shell .student-mgmt-table tbody td::before,
+    body.m-shell .admin-ops-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #65676b;
+        font-size: 0.72rem;
+        margin-right: 0.5rem;
+    }
+
+    /* Curriculator compact toolbars */
+    body.m-shell .curriculator-toolbar,
+    body.m-shell .document-toolbar {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+
+    body.m-shell .curriculator-toolbar .btn,
+    body.m-shell .document-toolbar .btn {
+        flex: 1 1 calc(50% - 0.35rem);
+        font-size: 0.8rem;
+    }
+
+    /* Survey / leave forms */
+    body.m-shell .survey-form .form-control,
+    body.m-shell .leave-form .form-control,
+    body.m-shell .survey-form .form-select,
+    body.m-shell .leave-form .form-select {
+        font-size: 16px !important;
+        min-height: 44px !important;
+    }
+
+    body.m-shell .survey-form .btn,
+    body.m-shell .leave-form .btn {
+        width: 100%;
+        margin-bottom: 0.35rem;
+    }
+
+    /* Filter bars stack */
+    body.m-shell .filter-bar,
+    body.m-shell .row.g-2.align-items-end {
+        --bs-gutter-y: 0.5rem;
+    }
+
+    body.m-shell .filter-bar > [class*="col-"],
+    body.m-shell .row.g-2.align-items-end > [class*="col-"] {
+        width: 100%;
+    }
+
+    /* Exam marks entry grid */
+    body.m-shell .marks-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+
+    body.m-shell .marks-table-wrapper.m-table-scroll-sticky th:first-child,
+    body.m-shell .marks-table-wrapper.m-table-scroll-sticky td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: #fff;
+    }
+
+    body.m-shell #marks-table {
+        min-width: 700px;
+    }
+
+    body.m-shell .code-cell {
+        width: auto !important;
+        min-width: 250px !important;
+        max-width: none !important;
+    }
+
+    body.m-shell .code-input {
+        min-width: 200px !important;
+        width: 100% !important;
+        font-size: 16px !important;
+        padding: 0.6rem 0.75rem !important;
+        min-height: 44px !important;
+    }
+
+    body.m-shell .code-cell .input-group {
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+
+    body.m-shell .code-cell .input-group .form-control {
+        flex: 1 1 auto;
+        min-width: 200px;
+    }
+
+    body.m-shell .code-cell .input-group .btn {
+        flex-shrink: 0;
+        min-width: 44px;
+        width: 44px;
+        padding: 0.5rem;
+    }
+
+    body.m-shell #marks-table .form-control {
+        font-size: 16px !important;
+        min-height: 44px !important;
+        padding: 0.6rem 0.75rem !important;
+    }
+
+    body.m-shell .mark-input {
+        min-width: 80px !important;
+        font-size: 16px !important;
+        padding: 0.6rem 0.5rem !important;
+    }
+
+    body.m-shell .student-id-input {
+        min-width: 150px !important;
+        font-size: 16px !important;
+        padding: 0.6rem 0.75rem !important;
+    }
+
+    body.m-shell .total-field {
+        min-width: 100px !important;
+        font-size: 16px !important;
+        padding: 0.6rem 0.5rem !important;
+    }
+
+    body.m-shell .serial-cell {
+        min-width: 50px !important;
+        width: 50px !important;
+    }
+
+    body.m-shell #marks-table thead th {
+        font-size: 0.85rem;
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    body.m-shell #marks-table thead th:nth-child(2) {
+        min-width: 250px !important;
+    }
+
+    /* Question bank compact toolbar */
+    body.m-shell .qb-folder-label {
+        max-width: min(160px, 42vw);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    body.m-shell .qb-toolbar {
+        padding: 8px;
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.5rem;
+    }
+
+    body.m-shell .qb-toolbar-left,
+    body.m-shell .qb-toolbar-right {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    body.m-shell .qb-breadcrumb {
+        width: 100%;
+        margin-top: 4px;
+        font-size: 0.78rem;
+        word-break: break-word;
+    }
+
+    body.m-shell .qb-hide-mobile {
+        display: none !important;
+    }
+
+    body.m-shell .qb-shell .row.g-2.align-items-center > [class*="col-"],
+    body.m-shell .qb-filter-row > [class*="col-"],
+    body.m-shell .qb-move-bar > [class*="col-"] {
+        width: 100%;
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
+
+    body.m-shell .qb-shell .row.g-2.align-items-center .col-8,
+    body.m-shell .qb-shell .row.g-2.align-items-center .col-4,
+    body.m-shell .qb-filter-row .col-8,
+    body.m-shell .qb-filter-row .col-4 {
+        width: 50%;
+        max-width: 50%;
+        flex: 0 0 50%;
+    }
+
+    body.m-shell .qb-move-bar .d-grid .btn {
+        width: 100%;
+        min-height: var(--m-touch);
+    }
+
+    body.m-shell .qb-filter-row .btn,
+    body.m-shell .qb-filter-row .form-control,
+    body.m-shell .qb-filter-row .input-group {
+        min-height: var(--m-touch);
+        font-size: 16px;
+    }
+
+    body.m-shell .module-header .m-action-row {
+        flex-direction: column;
+    }
+
+    body.m-shell .module-header .m-action-row > .btn,
+    body.m-shell .module-header .m-action-row > a.btn {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    body.m-shell .qb-folder-item .accordion-button {
+        padding: 0.65rem 0.75rem;
+        font-size: 0.85rem;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    body.m-shell .qb-folder-item .accordion-button .badge {
+        font-size: 0.68rem;
+    }
+
+    body.m-shell .qb-folder-item .dropdown {
+        margin-left: auto;
+    }
+
+    body.m-shell .qb-tip {
+        font-size: 0.75rem;
+        line-height: 1.35;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* Take attendance compact */
+    body.m-shell .double-class-box {
+        display: flex !important;
+        width: 100%;
+        padding: 0.65rem 0.85rem !important;
+        margin-bottom: 0.65rem !important;
+        align-items: center;
+    }
+
+    body.m-shell .double-class-box label {
+        font-size: 0.95rem !important;
+    }
+
+    body.m-shell .double-class-box .form-check-input {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: 0.1rem;
+    }
+
+    body.m-shell #date.form-control,
+    body.m-shell input[type="date"].form-control {
+        font-size: 16px !important;
+        min-height: var(--m-touch);
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table .form-check {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        min-height: var(--m-touch);
+        margin: 0;
+        padding-left: 0;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table .form-check-input {
+        width: 1.35rem;
+        height: 1.35rem;
+        margin: 0;
+        flex-shrink: 0;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table .form-check-label {
+        font-size: 0.78rem;
+        margin: 0;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table th:nth-child(3),
+    body.m-shell .m-table-scroll-sticky .attendance-table td:nth-child(3) {
+        position: sticky;
+        left: 72px;
+        z-index: 2;
+        background: #fff;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+        text-align: left !important;
+        min-width: 110px;
+        max-width: 140px;
+        white-space: normal !important;
+        font-size: 0.75rem;
+        line-height: 1.25;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table thead th:nth-child(3) {
+        background: #222;
+        color: #fff;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table tbody tr:nth-child(even) td:nth-child(3) {
+        background: #f2f2f2;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table th:nth-child(1),
+    body.m-shell .m-table-scroll-sticky .attendance-table td:nth-child(1) {
+        min-width: 28px;
+        width: 28px;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table th:nth-child(2),
+    body.m-shell .m-table-scroll-sticky .attendance-table td:nth-child(2) {
+        left: 28px !important;
+        min-width: 44px;
+    }
+
+    /* Attendance report overrides older sticky nth-child rules */
+    body.m-shell .m-table-scroll-sticky .att-report-table th:nth-child(1),
+    body.m-shell .m-table-scroll-sticky .att-report-table td:nth-child(1),
+    body.m-shell .m-table-scroll-sticky .att-report-table .att-col-si {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        color: transparent !important;
+        line-height: 0 !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky .att-report-table th:nth-child(2),
+    body.m-shell .m-table-scroll-sticky .att-report-table td:nth-child(2),
+    body.m-shell .m-table-scroll-sticky .att-report-table .att-col-id,
+    body.m-shell .m-table-scroll-sticky .att-report-table .freeze-col-2 {
+        left: 0 !important;
+        min-width: 52px !important;
+        max-width: 58px !important;
+        width: 52px !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky .att-report-table th:nth-child(3),
+    body.m-shell .m-table-scroll-sticky .att-report-table td:nth-child(3),
+    body.m-shell .m-table-scroll-sticky .att-report-table .att-col-name,
+    body.m-shell .m-table-scroll-sticky .att-report-table .freeze-col-3,
+    body.m-shell .m-table-scroll-sticky .att-report-table .student-name {
+        left: 52px !important;
+        min-width: 88px !important;
+        max-width: 110px !important;
+        width: 96px !important;
+        font-size: 0.68rem !important;
+    }
+
+    /* Attendance report toolbar */
+    body.m-shell .att-report-actions {
+        width: 100%;
+    }
+
+    body.m-shell .att-report-toolbar {
+        margin-bottom: 0.5rem !important;
+        gap: 0.5rem !important;
+        position: sticky;
+        top: calc(var(--m-topbar-height) + env(safe-area-inset-top, 0px));
+        z-index: 12;
+        background: var(--m-card-bg, #fff);
+        padding: 0.4rem 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    body.m-shell .att-report-primary {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.35rem;
+        margin-bottom: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    body.m-shell .att-report-primary > .btn {
+        flex: 1 1 0;
+        min-height: 36px;
+        font-size: 0.78rem !important;
+        margin-bottom: 0 !important;
+        padding: 0.35rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    body.m-shell .att-btn-full {
+        display: none !important;
+    }
+
+    body.m-shell .att-btn-short {
+        display: inline !important;
+    }
+
+    body.m-shell .edit-toggle {
+        justify-content: flex-start !important;
+        margin-bottom: 0 !important;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.1rem;
+        flex: 0 0 auto;
+    }
+
+    body.m-shell .edit-toggle .form-check-input {
+        width: 2.4em;
+        height: 1.25em;
+    }
+
+    body.m-shell .edit-toggle .form-check-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    body.m-shell.att-edit-on .att-edit-hint {
+        display: block !important;
+        font-size: 0.65rem;
+        line-height: 1.2;
+    }
+
+    body.m-shell .att-report-scroll {
+        max-height: calc(100dvh - 210px);
+        overflow: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+    }
+
+    body.m-shell .att-report-table {
+        font-size: 0.72rem !important;
+        min-width: 0 !important;
+    }
+
+    body.m-shell .att-report-table th,
+    body.m-shell .att-report-table td {
+        padding: 0.2rem 0.15rem !important;
+    }
+
+    body.m-shell .att-report-table .att-col-si {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        color: transparent !important;
+    }
+
+    body.m-shell .att-report-table .att-col-id,
+    body.m-shell .att-report-table .freeze-col-2 {
+        left: 0 !important;
+        min-width: 52px !important;
+        max-width: 58px;
+        width: 52px;
+        font-size: 0.68rem;
+        z-index: 5;
+    }
+
+    body.m-shell .att-report-table .att-col-name,
+    body.m-shell .att-report-table .freeze-col-3,
+    body.m-shell .att-report-table .student-name {
+        left: 52px !important;
+        min-width: 88px !important;
+        max-width: 110px !important;
+        width: 96px;
+        font-size: 0.68rem !important;
+        line-height: 1.2;
+        white-space: normal !important;
+        z-index: 5;
+        border-right: 2px solid #adb5bd !important;
+    }
+
+    body.m-shell .att-report-table thead .att-col-id,
+    body.m-shell .att-report-table thead .att-col-name,
+    body.m-shell .att-report-table thead .freeze-col-2,
+    body.m-shell .att-report-table thead .freeze-col-3 {
+        z-index: 6;
+        background: #222 !important;
+        color: #fff;
+    }
+
+    body.m-shell .att-report-table .att-col-group {
+        font-size: 0.62rem !important;
+        padding: 0.15rem !important;
+        letter-spacing: 0.02em;
+    }
+
+    body.m-shell .att-report-table .att-date-full {
+        display: none !important;
+    }
+
+    body.m-shell .att-report-table .att-date-short {
+        display: inline-block !important;
+    }
+
+    body.m-shell .att-report-table thead th.att-date-th {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        height: 72px;
+        min-width: 28px !important;
+        max-width: 30px !important;
+        width: 28px !important;
+        padding: 4px 2px !important;
+        font-size: 0.62rem !important;
+        font-weight: 600;
+        line-height: 1.1;
+        white-space: nowrap;
+        vertical-align: middle;
+        text-align: left;
+        letter-spacing: 0.01em;
+    }
+
+    body.m-shell .att-report-table .attendance-cell {
+        min-width: 28px !important;
+        width: 28px !important;
+        max-width: 30px !important;
+        padding: 0 !important;
+        vertical-align: middle;
+    }
+
+    body.m-shell .att-report-table .attendance-cell .status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        width: 100%;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    body.m-shell.att-edit-on .att-report-table .attendance-cell.editable {
+        background: rgba(13, 110, 253, 0.04);
+    }
+
+    body.m-shell.att-edit-on .att-report-table .attendance-cell.editable:active {
+        background: rgba(13, 110, 253, 0.16);
+    }
+
+    body.m-shell .att-report-table .att-col-part,
+    body.m-shell .att-report-table .att-col-total {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        color: transparent !important;
+    }
+
+    body.m-shell .att-report-table .att-col-present,
+    body.m-shell .att-report-table .att-col-pct,
+    body.m-shell .att-report-table .att-col-marks {
+        min-width: 36px;
+        font-size: 0.68rem;
+        white-space: nowrap;
+    }
+
+    body.m-shell .att-report-table .att-col-pct {
+        min-width: 44px;
+    }
+
+    body.m-shell .att-report-table .marks-input-edit {
+        width: 44px !important;
+        min-height: 30px;
+        font-size: 0.75rem;
+        padding: 0.15rem;
+    }
+
+    body.m-shell .att-report-table .manual-badge {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.25rem;
+    }
+
+    body.m-shell .att-teacher-card .card-header {
+        padding: 0.55rem 0.7rem;
+    }
+
+    body.m-shell .att-teacher-card .card-header h5 {
+        font-size: 0.85rem;
+    }
+
+    body.m-shell .att-teacher-card .card-body {
+        padding: 0.45rem !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky .attendance-table .student-name {
+        min-width: 88px !important;
+        max-width: 110px;
+        font-size: 0.68rem;
+        line-height: 1.2;
+        white-space: normal !important;
+    }
+
+    /* Assessment page */
+    body.m-shell .assessment-reveal-card .m-switch-grid {
+        margin-bottom: 0;
+    }
+
+    body.m-shell .assessment-reveal-card .m-action-row {
+        margin-top: 0.35rem;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.assessment-marks-table {
+        min-width: 640px !important;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.assessment-marks-table thead th {
+        font-size: 0.68rem;
+        padding: 0.4rem 0.25rem !important;
+        white-space: nowrap;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.assessment-marks-table td:nth-child(2),
+    body.m-shell .m-table-scroll-sticky table.assessment-marks-table th:nth-child(2) {
+        position: sticky;
+        left: 72px;
+        z-index: 2;
+        background: #fff;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+        text-align: left !important;
+        min-width: 100px;
+        max-width: 130px;
+        white-space: normal !important;
+        font-size: 0.72rem;
+        line-height: 1.25;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.assessment-marks-table thead th:nth-child(2) {
+        background: #f8f9fa;
+        z-index: 3;
+    }
+
+    body.m-shell .m-table-scroll-sticky table.assessment-marks-table tbody tr:nth-child(even) td:nth-child(2) {
+        background: #f8f9fa;
+    }
+
+    /* Routine maker timetable */
+    body.m-shell .routine-topbar,
+    body.m-shell .r-toolbar {
+        padding: 6px 8px !important;
+        flex-wrap: wrap !important;
+        gap: 0.35rem;
+        height: auto !important;
+        min-height: 44px;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+    }
+
+    body.m-shell .topbar-left,
+    body.m-shell .topbar-right,
+    body.m-shell .r-toolbar-left,
+    body.m-shell .r-toolbar-right {
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        width: 100%;
+        align-items: center;
+    }
+
+    body.m-shell .topbar-btn,
+    body.m-shell .r-toolbar .r-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        min-height: 36px;
+    }
+
+    body.m-shell .routine-name-input,
+    body.m-shell .r-title {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        width: 100%;
+        font-size: 14px !important;
+        flex: 1 1 100%;
+    }
+
+    body.m-shell .r-date {
+        font-size: 14px;
+        min-height: 36px;
+    }
+
+    body.m-shell .r-logo {
+        font-size: 0.85rem;
+    }
+
+    body.m-shell .routine-table-wrapper,
+    body.m-shell .r-table-wrap,
+    body.m-shell .routine-table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding: 4px;
+    }
+
+    body.m-shell .routine-table {
+        font-size: 10.5px;
+    }
+
+    body.m-shell .routine-table tbody td.slot-cell {
+        min-height: 36px;
+        height: 36px;
+        padding: 2px !important;
+    }
+
+    body.m-shell .routine-table th.day-col,
+    body.m-shell .routine-table td.day-col,
+    body.m-shell .routine-table th:first-child,
+    body.m-shell .routine-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: #fff;
+        min-width: 56px;
+        max-width: 64px;
+        width: 56px;
+        font-size: 10px;
+    }
+
+    body.m-shell .routine-table th.room-col,
+    body.m-shell .routine-table td.room-col,
+    body.m-shell .routine-table th:nth-child(2),
+    body.m-shell .routine-table td:nth-child(2) {
+        position: sticky;
+        left: 56px;
+        z-index: 3;
+        background: #fff;
+        min-width: 56px;
+        max-width: 72px;
+        width: 56px;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+        font-size: 10px;
+    }
+
+    body.m-shell .routine-table thead th.day-col {
+        background: var(--primary, #2563eb) !important;
+        color: #fff !important;
+        z-index: 5;
+    }
+
+    body.m-shell .routine-table thead th.room-col,
+    body.m-shell .routine-table thead th:nth-child(2) {
+        z-index: 4;
+        background: #f1f3f5 !important;
+    }
+
+    body.m-shell .routine-table th.time-col {
+        font-size: 9.5px;
+        white-space: nowrap;
+        padding: 4px 3px !important;
+    }
+
+    /* Align off-canvas course panel under mobile topbar */
+    body.m-shell {
+        --routine-content-top: calc(var(--m-topbar-height) + env(safe-area-inset-top, 0px));
+    }
+
+    body.m-shell .course-panel,
+    body.m-shell .r-courses {
+        top: var(--routine-content-top) !important;
+        height: calc(100dvh - var(--routine-content-top)) !important;
+    }
+
+    body.m-shell .course-panel-toggle,
+    body.m-shell .r-fixed-courses {
+        top: calc(var(--routine-content-top) + 6px) !important;
+        left: 10px !important;
+        min-width: 40px;
+        min-height: 40px;
+        z-index: 150;
+    }
+
+    body.m-shell .routine-app,
+    body.m-shell .r-body {
+        min-height: calc(100dvh - var(--routine-content-top));
+    }
+
+    body.m-shell .routine-app {
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    body.m-shell .container:has(.routine-app),
+    body.m-shell main.m-main > .container:has(.routine-app) {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* ---- Student dashboard surfaces ---- */
+    body.m-shell .student-scores-page .card.shadow,
+    body.m-shell .student-files-page .card.shadow,
+    body.m-shell .student-notif-page .card.shadow {
+        box-shadow: none !important;
+    }
+
+    body.m-shell .student-scores-page,
+    body.m-shell .student-files-page,
+    body.m-shell .student-dash-page,
+    body.m-shell .student-reg-page,
+    body.m-shell .student-notif-page {
+        padding-top: 0.35rem !important;
+    }
+
+    body.m-shell .sv-course-card,
+    body.m-shell .sf-card,
+    body.m-shell .sn-card,
+    body.m-shell .student-reg-page .card {
+        border-radius: 12px !important;
+    }
+
+    body.m-shell .student-reg-page .table-mobile-stack thead {
+        display: none;
+    }
+
+    body.m-shell .student-reg-page .table-mobile-stack tbody tr {
+        display: block;
+        background: #fff;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 12px;
+        margin-bottom: 0.65rem;
+        padding: 0.7rem 0.8rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    body.m-shell .student-reg-page .table-mobile-stack tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.65rem;
+        border: none !important;
+        padding: 0.4rem 0 !important;
+        white-space: normal !important;
+        text-align: right !important;
+    }
+
+    body.m-shell .student-reg-page .table-mobile-stack tbody td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: #6b7280;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        text-align: left;
+        flex-shrink: 0;
+        max-width: 42%;
+    }
+
+    body.m-shell .student-reg-page .table-mobile-stack tbody td[data-label=""] {
+        display: none;
+    }
+
+    body.m-shell .student-reg-page .table-mobile-stack tbody td[data-label="Action"] .btn,
+    body.m-shell .student-reg-page .table-mobile-stack tbody td[data-label="Remarks"] .form-select {
+        width: 100%;
+        max-width: 180px;
+    }
+
+    body.m-shell .student-reg-page .sr-total-row td[data-label="Summary"]::before {
+        content: none;
+    }
+
+    body.m-shell .batch-events-student .card,
+    body.m-shell .calendar-container {
+        border-radius: 12px;
+    }
+
+    body.m-shell .calendar-container {
+        padding: 0.85rem !important;
+    }
+
+    body.m-shell .calendar-day {
+        min-height: 64px !important;
+        padding: 0.25rem !important;
+    }
+
+    body.m-shell .calendar-day-number {
+        font-size: 0.78rem;
+    }
+
+    body.m-shell .calendar-event {
+        font-size: 0.58rem !important;
+        padding: 0.1rem 0.2rem !important;
+    }
+
+    body.m-shell .qb-shell {
+        border-radius: 12px;
+    }
+
+    body.m-shell .qb-toolbar {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    body.m-shell .qb-toolbar-left,
+    body.m-shell .qb-toolbar-right {
+        width: 100%;
+    }
+
+    body.m-shell .qb-filter-row .btn {
+        min-height: 36px;
+    }
+
+    body.m-shell #btn-course-filter {
+        min-height: 36px;
+    }
+
+    body.m-shell #course-filter-modal .modal-body {
+        padding: 0.85rem 1rem;
+    }
+
+    body.m-shell .course-filter-item {
+        min-height: 44px;
+    }
+}
+
+/* Desktop reset — never leak mobile shell */
+@media (min-width: 992px) {
+    .m-topbar,
+    .m-drawer,
+    .m-drawer-backdrop {
+        display: none !important;
+    }
+
+    body.m-shell {
+        background: #f8f9fa;
+        padding-top: 0;
+    }
+}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block mobile_title %}Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user me-2"></i>Update Profile</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3 text-center">
+                            <label class="form-label d-block">Profile Photo</label>
+                            {% if current_user.photo %}
+                                <img src="{{ current_user.photo }}" alt="Profile Photo" class="img-thumbnail mb-2" style="max-width: 150px; max-height: 150px; object-fit: cover; border-radius: 50%;">
+                            {% else %}
+                                <div class="bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 150px; height: 150px; border-radius: 50%; border: 2px dashed #ccc;">
+                                    <i class="fas fa-user fa-3x text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <input type="file" class="form-control" id="photo" name="photo" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+                            <small class="text-muted">Max size: 16MB. Allowed: PNG, JPG, JPEG, GIF, WEBP</small>
+                        </div>
+                        {% set profile_user_roles = parse_roles(current_user.role) %}
+                        {% set name_locked = (not is_admin(current_user)) and (current_user.teacher_id or ('teacher' in profile_user_roles or 'head' in profile_user_roles or 'dean' in profile_user_roles)) %}
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ current_user.full_name }}" {% if name_locked %}readonly{% endif %} required>
+                            {% if name_locked %}
+                            <small class="text-muted">Your name is managed by the institution. Contact an administrator to request a change.</small>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+                        </div>
+                        
+                        {% set user_roles = parse_roles(current_user.role) %}
+                        {% if 'teacher' in user_roles or 'dean' in user_roles or 'head' in user_roles or is_admin(current_user) %}
+                        <hr>
+                        <h5>Digital Signature</h5>
+                        <p class="small text-muted mb-2">
+                            Used on remuneration bills, admission forms (Scrutinizer), and other official PDFs.
+                            Prefer a clear scan or photo of your handwritten signature on a white background (JPG/PNG, max 1&nbsp;MB).
+                        </p>
+                        <div class="mb-3 text-center">
+                            {% if current_user.signature_path %}
+                                <img src="{{ signature_preview_url or ('/' + current_user.signature_path.lstrip('/')) }}"
+                                     alt="Your signature"
+                                     class="img-thumbnail mb-2 bg-white"
+                                     style="max-width: 280px; max-height: 90px; object-fit: contain;">
+                                <div class="form-check mb-2 d-inline-block text-start">
+                                    <input class="form-check-input" type="checkbox" value="1" id="remove_signature" name="remove_signature">
+                                    <label class="form-check-label" for="remove_signature">Remove current signature</label>
+                                </div>
+                            {% else %}
+                                <div class="bg-light d-inline-flex align-items-center justify-content-center mb-2 px-4"
+                                     style="min-width: 220px; height: 70px; border: 2px dashed #ccc;">
+                                    <span class="text-muted small">No signature uploaded</span>
+                                </div>
+                            {% endif %}
+                            <input type="file" class="form-control" id="signature" name="signature"
+                                   accept="image/png,image/jpeg,image/jpg">
+                            <small class="text-muted">JPG or PNG only. Max 1&nbsp;MB.</small>
+                        </div>
+                        {% endif %}
+
+                        {% if 'teacher' in user_roles or 'dean' in user_roles or 'head' in user_roles %}
+                        <hr>
+                        <h5>Teacher Information</h5>
+                        <div class="mb-3">
+                            <label for="call_sign" class="form-label">Call Sign</label>
+                            <input type="text" class="form-control" id="call_sign" name="call_sign" value="{% if teacher_record and teacher_record.call_sign %}{{ teacher_record.call_sign }}{% endif %}" placeholder="Enter your call sign">
+                            <small class="text-muted">Your call sign for routine and other purposes</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bank_account_no" class="form-label">Bank Account No</label>
+                            <input type="text" class="form-control" id="bank_account_no" name="bank_account_no" value="{% if teacher_record and teacher_record.bank_account_no %}{{ teacher_record.bank_account_no }}{% endif %}" placeholder="Enter your bank account number">
+                            <small class="text-muted">Bank account number for remuneration purposes</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tin_number" class="form-label">TIN Number</label>
+                            <input type="text" class="form-control" id="tin_number" name="tin_number" value="{% if teacher_record and teacher_record.tin_number %}{{ teacher_record.tin_number }}{% endif %}" placeholder="Enter your TIN number">
+                            <small class="text-muted">Taxpayer Identification Number (TIN)</small>
+                        </div>
+                        {% endif %}
+                        
+                        <hr>
+                        <h5>Color Theme</h5>
+                        <div class="mb-3">
+                            <label for="theme" class="form-label">Choose Your Theme</label>
+                            <select class="form-select" id="theme" name="theme">
+                                <option value="default" {% if not current_user.theme or current_user.theme == 'default' %}selected{% endif %}>Default (Purple Gradient)</option>
+                                <option value="blue" {% if current_user.theme == 'blue' %}selected{% endif %}>Blue</option>
+                                <option value="sky" {% if current_user.theme == 'sky' %}selected{% endif %}>Sky Blue</option>
+                                <option value="cyan" {% if current_user.theme == 'cyan' %}selected{% endif %}>Cyan</option>
+                                <option value="navy" {% if current_user.theme == 'navy' %}selected{% endif %}>Navy</option>
+                                <option value="indigo" {% if current_user.theme == 'indigo' %}selected{% endif %}>Indigo</option>
+                                <option value="violet" {% if current_user.theme == 'violet' %}selected{% endif %}>Violet</option>
+                                <option value="green" {% if current_user.theme == 'green' %}selected{% endif %}>Green</option>
+                                <option value="emerald" {% if current_user.theme == 'emerald' %}selected{% endif %}>Emerald</option>
+                                <option value="lime" {% if current_user.theme == 'lime' %}selected{% endif %}>Lime</option>
+                                <option value="teal" {% if current_user.theme == 'teal' %}selected{% endif %}>Teal</option>
+                                <option value="red" {% if current_user.theme == 'red' %}selected{% endif %}>Red</option>
+                                <option value="rose" {% if current_user.theme == 'rose' %}selected{% endif %}>Rose</option>
+                                <option value="pink" {% if current_user.theme == 'pink' %}selected{% endif %}>Pink</option>
+                                <option value="orange" {% if current_user.theme == 'orange' %}selected{% endif %}>Orange</option>
+                                <option value="amber" {% if current_user.theme == 'amber' %}selected{% endif %}>Amber</option>
+                                <option value="brown" {% if current_user.theme == 'brown' %}selected{% endif %}>Brown</option>
+                                <option value="slate" {% if current_user.theme == 'slate' %}selected{% endif %}>Slate</option>
+                            </select>
+                            <small class="text-muted">Select your preferred color theme for the application</small>
+                        </div>
+                        
+                        <hr>
+                        <h5>Change Password</h5>
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" placeholder="Enter current password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" placeholder="Enter new password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm new password">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme gradient mapping - matches base.html gradients
+    const themeGradients = {
+        'default': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+        'blue': 'linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%)',
+        'sky': 'linear-gradient(135deg, #38bdf8 0%, #0284c7 50%, #0369a1 100%)',
+        'cyan': 'linear-gradient(135deg, #22d3ee 0%, #0891b2 50%, #0e7490 100%)',
+        'navy': 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #172554 100%)',
+        'indigo': 'linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%)',
+        'violet': 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 50%, #5b21b6 100%)',
+        'green': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+        'emerald': 'linear-gradient(135deg, #34d399 0%, #059669 50%, #064e3b 100%)',
+        'lime': 'linear-gradient(135deg, #84cc16 0%, #65a30d 50%, #4d7c0f 100%)',
+        'teal': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)',
+        'red': 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+        'rose': 'linear-gradient(135deg, #fb7185 0%, #e11d48 50%, #be123c 100%)',
+        'pink': 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
+        'orange': 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)',
+        'amber': 'linear-gradient(135deg, #fbbf24 0%, #d97706 50%, #b45309 100%)',
+        'brown': 'linear-gradient(135deg, #a16207 0%, #854d0e 50%, #713f12 100%)',
+        'slate': 'linear-gradient(135deg, #64748b 0%, #475569 50%, #334155 100%)'
+    };
+    
+    // Get theme dropdown element
+    const themeSelect = document.getElementById('theme');
+    
+    if (themeSelect) {
+        // Add event listener for theme change
+        themeSelect.addEventListener('change', function() {
+            const selectedTheme = this.value;
+            const gradient = themeGradients[selectedTheme] || themeGradients['default'];
+            
+            // Update CSS variable for live preview
+            document.documentElement.style.setProperty('--theme-gradient', gradient);
+        });
+    }
+});
+</script>
+{% endblock %} 

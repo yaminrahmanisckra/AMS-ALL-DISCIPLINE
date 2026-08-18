@@ -1,0 +1,1043 @@
+{% extends "base.html" %}
+{% block title %}Course Registration{% endblock %}
+
+{% block mobile_title %}Registration{% endblock %}
+{% block content %}
+<div class="container my-3 my-md-5 student-reg-page">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3 mb-md-4">
+        <div>
+            <h1 class="mb-1 sr-title">Course Registration</h1>
+            <p class="text-muted mb-0 sr-sub">Select your courses for the academic session</p>
+        </div>
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Selection Form -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Select Session, Year & Term</h5>
+        </div>
+        <div class="card-body">
+            <form id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="session" class="form-label">Academic Session <span class="text-danger">*</span></label>
+                        <select class="form-select" id="session" name="session" required>
+                            <option value="">Select Session</option>
+                            {% for session in academic_sessions %}
+                            <option value="{{ session }}">{{ session }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="year" class="form-label">Year <span class="text-danger">*</span></label>
+                        <select class="form-select" id="year" name="year" required>
+                            <option value="">Select Year</option>
+                            {% for y in tenant.year_select_options %}
+                            <option value="{{ y }}">{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="term" class="form-label">Term <span class="text-danger">*</span></label>
+                        <select class="form-select" id="term" name="term" required>
+                            <option value="">Select Term</option>
+                            <option value="First">First</option>
+                            <option value="Second">Second</option>
+                            <option value="Thesis Term">Thesis Term</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Load Courses
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Available Courses -->
+    <div class="card shadow-sm mb-4" id="coursesCard" style="display: none;">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-book me-2"></i>Available Courses</h5>
+            <button type="button" class="btn btn-light btn-sm" id="hideAvailableBtn" style="display:none;">
+                <i class="fas fa-times me-1"></i>Close
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="coursesLoading" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <div id="coursesList" class="table-responsive">
+                <!-- Courses will be loaded here -->
+            </div>
+
+            <!-- Actions (requested: show inside Available Courses) -->
+            <div class="mt-3 text-end" id="availableActions" style="display:none;">
+                <button type="button" class="btn btn-primary me-2 js-save-registration" disabled>
+                    <i class="fas fa-save me-2"></i>Save Registration
+                </button>
+                <button type="button" class="btn btn-warning me-2 js-send-coordinator" disabled>
+                    <i class="fas fa-paper-plane me-2"></i>Send to Co-Ordinator
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="registrationStatus"></div>
+
+    <!-- Selected Courses -->
+    <div class="card shadow-sm" id="selectedCard" style="display: none;">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Selected Courses</h5>
+            <div class="d-flex align-items-center gap-2">
+                <strong>Total Credits: <span id="totalCredits">0</span></strong>
+                <button type="button" class="btn btn-light btn-sm" id="editSelectionBtn" style="display:none;">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-mobile-stack sr-selected-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>SL</th>
+                            <th>Course Code</th>
+                            <th>Course Name</th>
+                            <th>Credit</th>
+                            <th>Type</th>
+                            <th>Nature</th>
+                            <th>Source Year/Term</th>
+                            <th>Remarks</th>
+                            <th>Carry On</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="selectedCoursesTable">
+                        <!-- Selected courses will be added here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3 d-flex justify-content-between align-items-stretch flex-wrap gap-2 sr-actions-bar">
+                <div>
+                    <button type="button" class="btn btn-sm btn-danger" id="removeAllBtn" onclick="removeAllCourses()" style="display: none;">
+                        <i class="fas fa-times-circle me-1"></i>Remove All Courses
+                    </button>
+                </div>
+                <div class="d-flex flex-wrap gap-2 sr-primary-actions">
+                    <button type="button" class="btn btn-primary js-save-registration" id="saveRegistrationBtn" disabled>
+                        <i class="fas fa-save me-2"></i>Save Registration
+                    </button>
+                    <button type="button" class="btn btn-warning js-send-coordinator" id="sendToCoordinatorBtn" disabled>
+                        <i class="fas fa-paper-plane me-2"></i>Send to Co-Ordinator
+                    </button>
+                    <button type="button" class="btn btn-success" id="downloadPdfBtn" disabled>
+                        <i class="fas fa-file-pdf me-2"></i>Download Registration PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.student-reg-page .sr-title {
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    font-weight: 700;
+    color: #111827;
+}
+.student-reg-page .sr-sub {
+    font-size: 0.88rem;
+}
+@media (max-width: 575.98px) {
+    .student-reg-page {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    .student-reg-page .card-header h5 {
+        font-size: 0.95rem;
+    }
+    .student-reg-page .sr-primary-actions {
+        width: 100%;
+    }
+    .student-reg-page .sr-primary-actions .btn,
+    .student-reg-page #availableActions .btn,
+    .student-reg-page #removeAllBtn {
+        width: 100%;
+    }
+    .student-reg-page .sr-actions-bar > div:first-child {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+let selectedCourses = [];
+let currentSession = '';
+let currentYear = '';
+let currentTerm = '';
+const statusBox = document.getElementById('registrationStatus');
+const saveBtn = document.getElementById('saveRegistrationBtn');
+const downloadBtn = document.getElementById('downloadPdfBtn');
+const sendToCoordinatorBtn = document.getElementById('sendToCoordinatorBtn');
+const editSelectionBtn = document.getElementById('editSelectionBtn');
+const hideAvailableBtn = document.getElementById('hideAvailableBtn');
+const availableActions = document.getElementById('availableActions');
+const coursesCardEl = document.getElementById('coursesCard');
+const saveRegistrationBtns = () => Array.from(document.querySelectorAll('.js-save-registration'));
+const sendCoordinatorBtns = () => Array.from(document.querySelectorAll('.js-send-coordinator'));
+
+function setSaveRegistrationEnabled(enabled) {
+    saveRegistrationBtns().forEach(btn => { btn.disabled = !enabled; });
+}
+function setSendCoordinatorEnabled(enabled) {
+    sendCoordinatorBtns().forEach(btn => { btn.disabled = !enabled; });
+}
+function setSaveRegistrationHtml(html) {
+    saveRegistrationBtns().forEach(btn => { btn.innerHTML = html; });
+}
+function setSendCoordinatorHtml(html) {
+    sendCoordinatorBtns().forEach(btn => { btn.innerHTML = html; });
+}
+
+let showAvailableCourses = true;
+
+function setAvailableCoursesVisible(visible) {
+    showAvailableCourses = !!visible;
+    if (!coursesCardEl) return;
+    coursesCardEl.style.display = showAvailableCourses ? 'block' : 'none';
+    if (availableActions) availableActions.style.display = showAvailableCourses ? 'block' : 'none';
+    if (hideAvailableBtn) hideAvailableBtn.style.display = showAvailableCourses ? 'inline-block' : 'none';
+}
+
+function showStatus(message, type = 'info') {
+    if (!statusBox) return;
+    const alertClass = type === 'error' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-info';
+    statusBox.innerHTML = `
+        <div class="alert ${alertClass} alert-dismissible fade show shadow-sm" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+}
+
+function isSameCourse(existing, course) {
+    const existingCourseId = existing.course_id || existing.id;
+    const incomingCourseId = course.course_id || course.id;
+    if (existingCourseId && incomingCourseId) {
+        return String(existingCourseId) === String(incomingCourseId);
+    }
+    return existing.course_code === course.course_code;
+}
+
+const SERIAL_YEAR_ORDER = {{ tenant.year_select_options|tojson }};
+const SERIAL_TERM_ORDER = ['First', 'Second', 'Third', 'Fourth', 'Thesis Term'];
+
+function sortYearsSerial(years) {
+    const idx = (y) => {
+        const i = SERIAL_YEAR_ORDER.indexOf(String(y));
+        return i === -1 ? SERIAL_YEAR_ORDER.length : i;
+    };
+    return [...years].sort((a, b) => idx(a) - idx(b) || String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+}
+
+function sortTermsSerial(terms) {
+    const idx = (t) => {
+        const i = SERIAL_TERM_ORDER.indexOf(String(t));
+        return i === -1 ? SERIAL_TERM_ORDER.length : i;
+    };
+    return [...terms].sort((a, b) => idx(a) - idx(b) || String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+}
+
+// Load Year and Term options based on selected Session
+function loadYearTermOptions(session) {
+    const yearSelect = document.getElementById('year');
+    const termSelect = document.getElementById('term');
+    
+    // Reset dropdowns
+    yearSelect.innerHTML = '<option value="">Select Year</option>';
+    termSelect.innerHTML = '<option value="">Select Term</option>';
+    
+    if (!session) {
+        return;
+    }
+    
+    // Show loading state
+    yearSelect.disabled = true;
+    termSelect.disabled = true;
+    
+    fetch(`/course-management/student/registration/api/year-term?session=${encodeURIComponent(session)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.year_term_options && data.year_term_options.length > 0) {
+                // Get unique years and terms
+                const uniqueYears = sortYearsSerial([...new Set(data.year_term_options.map(yt => yt.year))]);
+                const uniqueTerms = sortTermsSerial([...new Set(data.year_term_options.map(yt => yt.term))]);
+                
+                // Populate Year dropdown
+                uniqueYears.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                });
+                
+                // Populate Term dropdown
+                uniqueTerms.forEach(term => {
+                    const option = document.createElement('option');
+                    option.value = term;
+                    option.textContent = term;
+                    termSelect.appendChild(option);
+                });
+            } else {
+                // If no options found, show default options
+                const defaultYears = {{ tenant.year_select_options|tojson }};
+                const defaultTerms = ['First', 'Second', 'Thesis Term'];
+                
+                defaultYears.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                });
+                
+                defaultTerms.forEach(term => {
+                    const option = document.createElement('option');
+                    option.value = term;
+                    option.textContent = term;
+                    termSelect.appendChild(option);
+                });
+            }
+            
+            yearSelect.disabled = false;
+            termSelect.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error loading year-term options:', error);
+            // On error, show default options
+            const defaultYears = {{ tenant.year_select_options|tojson }};
+            const defaultTerms = ['First', 'Second', 'Thesis Term'];
+            
+            defaultYears.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+            
+            defaultTerms.forEach(term => {
+                const option = document.createElement('option');
+                option.value = term;
+                option.textContent = term;
+                termSelect.appendChild(option);
+            });
+            
+            yearSelect.disabled = false;
+            termSelect.disabled = false;
+        });
+}
+
+// Add event listener for Session dropdown change
+document.getElementById('session').addEventListener('change', function() {
+    const session = this.value;
+    loadYearTermOptions(session);
+    
+    // Reset Year and Term when Session changes
+    document.getElementById('year').value = '';
+    document.getElementById('term').value = '';
+});
+
+document.getElementById('filterForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const session = document.getElementById('session').value;
+    const year = document.getElementById('year').value;
+    const term = document.getElementById('term').value;
+    
+    if (!session || !year || !term) {
+        alert('Please select Session, Year, and Term');
+        return;
+    }
+    
+    currentSession = session;
+    currentYear = year;
+    currentTerm = term;
+    
+    selectedCourses = [];
+    updateSelectedTable();
+    loadSavedRegistrations(session, year, term)
+        .finally(() => {
+            // If there are saved/selected courses, default to hiding Available Courses until Edit is clicked
+            const shouldShow = (selectedCourses.length === 0);
+            setAvailableCoursesVisible(shouldShow);
+            return loadCourses(year, term);
+        });
+});
+
+function loadSavedRegistrations(session, year, term) {
+    return fetch(`/course-management/student/registration/api/registrations?session=${encodeURIComponent(session)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.registrations) {
+                selectedCourses = data.registrations.map(course => ({
+                    id: course.course_id || course.id || null,
+                    course_id: course.course_id || course.id || null,
+                    registration_id: course.registration_id || null,
+                    course_code: course.course_code,
+                    course_name: course.course_name,
+                    credit: course.credit,
+                    course_type: course.course_type,
+                    nature: course.nature || 'Core',
+                    source_year: course.source_year || course.year || currentYear,
+                    source_term: course.source_term || course.term || currentTerm,
+                    remark: course.remark || 'Regular',
+                    carry_on: course.carry_on || false,
+                    use_relevant_for_committee: typeof course.use_relevant_for_committee === 'boolean' ? course.use_relevant_for_committee : true,
+                    registered_by: course.registered_by || 'student',
+                    status: course.status || 'pending'  // Include status to check if finalized
+                }));
+                
+                // Check if any registration was created by coordinator/head OR finalized by coordinator
+                const hasCoordinatorReg = selectedCourses.some(c => {
+                    // Cannot edit if created by coordinator/head
+                    if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+                        return true;
+                    }
+                    // Cannot edit if finalized (even if registered_by is 'student' - means coordinator finalized it)
+                    if (c.status === 'finalized') {
+                        return true;
+                    }
+                    return false;
+                });
+                if (hasCoordinatorReg) {
+                    showStatus('Some registrations are finalized or created by coordinator/head. You can only download these registrations, not edit them.', 'warning');
+                }
+                
+                updateSelectedTable();
+                if (selectedCourses.length > 0) {
+                    if (!hasCoordinatorReg) {
+                        showStatus('Loaded previously saved courses for this session.', 'info');
+                    }
+                } else {
+                    showStatus('No saved registration found for this session.', 'info');
+                }
+            } else if (!data.success) {
+                showStatus(data.message || 'Failed to load saved registrations.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading saved registrations:', error);
+            showStatus('Error loading saved registrations.', 'error');
+        });
+}
+
+function loadCourses(year, term) {
+    const coursesCard = document.getElementById('coursesCard');
+    const coursesList = document.getElementById('coursesList');
+    const coursesLoading = document.getElementById('coursesLoading');
+    
+    // Keep visibility controlled by setAvailableCoursesVisible()
+    coursesCard.style.display = showAvailableCourses ? 'block' : 'none';
+    if (availableActions) availableActions.style.display = showAvailableCourses ? 'block' : 'none';
+    coursesLoading.style.display = 'block';
+    coursesList.innerHTML = '';
+    
+    fetch(`/course-management/student/registration/api/courses?year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}`)
+        .then(response => response.json())
+        .then(data => {
+            coursesLoading.style.display = 'none';
+            if (data.success && data.courses.length > 0) {
+                let html = '<table class="table table-bordered table-hover table-mobile-stack sr-available-table"><thead class="table-light"><tr>';
+                html += '<th>Course Code</th><th>Course Name</th><th>Credit</th><th>Type</th><th>Nature</th><th>Remarks</th><th>Carry On</th><th>Action</th>';
+                html += '</tr></thead><tbody>';
+                
+                data.courses.forEach(course => {
+                    const isSelected = selectedCourses.some(c => isSameCourse(c, { id: course.id, course_code: course.course_code }));
+                    const remarkSelectId = `remark-${course.id}`;
+                    const carryOnCheckboxId = `carryOn-${course.id}`;
+                    html += `<tr>
+                        <td data-label="Course Code"><strong>${course.course_code}</strong></td>
+                        <td data-label="Course Name">${course.course_name}</td>
+                        <td data-label="Credit">${course.credit}</td>
+                        <td data-label="Type">${course.course_type}</td>
+                        <td data-label="Nature">${course.nature || 'Core'}</td>
+                        <td data-label="Remarks">
+                            <select id="${remarkSelectId}" class="form-select form-select-sm" onchange="updateCarryOnVisibility(${course.id})">
+                                <option value="Regular">Regular</option>
+                                <option value="Retake">Retake</option>
+                                <option value="Re-retake">Re-retake</option>
+                            </select>
+                        </td>
+                        <td data-label="Carry On" id="carryOnCell_${course.id}">
+                            <div class="form-check form-switch" style="display: none;">
+                                <input class="form-check-input" type="checkbox" id="${carryOnCheckboxId}">
+                                <label class="form-check-label" for="${carryOnCheckboxId}">Carry On</label>
+                            </div>
+                        </td>
+                        <td data-label="Action">
+                            ${isSelected ? 
+                                '<span class="badge bg-success">Selected</span>' : 
+                                `<button class="btn btn-sm btn-primary" onclick="addCourse(${course.id}, '${course.course_code.replace(/'/g, "\\'")}', '${course.course_name.replace(/'/g, "\\'")}', ${course.credit}, '${course.course_type}', '${course.nature || 'Core'}', document.getElementById('${remarkSelectId}').value, document.getElementById('${carryOnCheckboxId}') && document.getElementById('${carryOnCheckboxId}').checked)">
+                                    <i class="fas fa-plus me-1"></i>Add
+                                </button>`
+                            }
+                        </td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                coursesList.innerHTML = html;
+            } else {
+                coursesList.innerHTML = '<div class="alert alert-info">No courses available for the selected Year and Term.</div>';
+            }
+        })
+        .catch(error => {
+            coursesLoading.style.display = 'none';
+            coursesList.innerHTML = '<div class="alert alert-danger">Error loading courses. Please try again.</div>';
+            console.error('Error:', error);
+        });
+}
+
+function updateCarryOnVisibility(courseId) {
+    const remarkSelect = document.getElementById(`remark-${courseId}`);
+    const carryOnCell = document.getElementById(`carryOnCell_${courseId}`);
+    if (remarkSelect && carryOnCell) {
+        const remark = remarkSelect.value;
+        const carryOnDiv = carryOnCell.querySelector('.form-check');
+        if (carryOnDiv) {
+            if (remark === 'Retake' || remark === 'Re-retake') {
+                carryOnDiv.style.display = '';
+            } else {
+                carryOnDiv.style.display = 'none';
+                const carryOnCheckbox = document.getElementById(`carryOn-${courseId}`);
+                if (carryOnCheckbox) {
+                    carryOnCheckbox.checked = false;
+                }
+            }
+        }
+    }
+}
+
+function addCourse(id, code, name, credit, type, nature, remark, carryOn = false) {
+    if (selectedCourses.some(c => isSameCourse(c, { id: id, course_code: code }))) {
+        return;
+    }
+    
+    selectedCourses.push({
+        id: id,
+        course_id: id,
+        registration_id: null,
+        course_code: code,
+        course_name: name,
+        credit: credit,
+        course_type: type,
+        nature: nature,
+        source_year: currentYear,
+        source_term: currentTerm,
+        remark: remark || 'Regular',
+        carry_on: carryOn || false,
+        use_relevant_for_committee: (remark === 'Retake' || remark === 'Re-retake'),
+        registered_by: 'student',  // New courses added by student
+        status: 'pending'  // New courses are pending by default
+    });
+    
+    updateSelectedTable();
+    loadCourses(currentYear, currentTerm); // Refresh to update "Selected" badges
+}
+
+function updateSelectedCourseRemark(courseIdOrIndex, remark) {
+    const course = selectedCourses.find(c => (c.id && c.id === courseIdOrIndex) || selectedCourses.indexOf(c) === courseIdOrIndex);
+    if (course) {
+        course.remark = remark;
+        if (remark === 'Regular') {
+            course.carry_on = false;
+            course.use_relevant_for_committee = false;
+        } else if (remark === 'Retake' || remark === 'Re-retake') {
+            // Keep existing explicit choice if any; otherwise default to merged behavior.
+            if (typeof course.use_relevant_for_committee !== 'boolean') {
+                course.use_relevant_for_committee = true;
+            }
+        }
+        updateSelectedTable();
+    }
+}
+
+function updateSelectedCourseCarryOn(courseIdOrIndex, carryOn) {
+    const course = selectedCourses.find(c => (c.id && c.id === courseIdOrIndex) || selectedCourses.indexOf(c) === courseIdOrIndex);
+    if (course) {
+        course.carry_on = carryOn;
+    }
+}
+
+function removeCourse(registrationId, code) {
+    // Find the course to remove
+    const courseToRemove = selectedCourses.find(c => {
+        if (registrationId && c.registration_id) {
+            return String(c.registration_id) === String(registrationId);
+        }
+        return c.course_code === code;
+    });
+    
+    if (!courseToRemove) {
+        return;
+    }
+    
+    // Check if it's a coordinator/head registration or finalized - cannot remove
+    if ((courseToRemove.registered_by && (courseToRemove.registered_by === 'coordinator' || courseToRemove.registered_by === 'head')) || courseToRemove.status === 'finalized') {
+        alert('Cannot remove this course: It is finalized or created by coordinator/head.');
+        return;
+    }
+    
+    // If course has registration ID (saved in backend), need to deregister from backend
+    if (courseToRemove.registration_id && currentSession && currentYear && currentTerm) {
+        if (!confirm(`Are you sure you want to remove ${courseToRemove.course_code} - ${courseToRemove.course_name}?`)) {
+            return;
+        }
+        
+        // Call backend to deregister
+        fetch('/course-management/student/registration/remove-course', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session: currentSession,
+                year: currentYear,
+                term: currentTerm,
+                registration_id: courseToRemove.registration_id
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove from selectedCourses array
+                selectedCourses = selectedCourses.filter(c => {
+                    if (registrationId && c.registration_id) {
+                        return String(c.registration_id) !== String(registrationId);
+                    }
+                    return c.course_code !== code;
+                });
+                updateSelectedTable();
+                // Reload courses list to update "Add" buttons immediately
+                loadCourses(currentYear, currentTerm);
+                // Reload saved registrations to get fresh data
+                loadSavedRegistrations(currentSession, currentYear, currentTerm)
+                    .then(() => loadCourses(currentYear, currentTerm));
+                showStatus(`Successfully removed ${courseToRemove.course_code} from registration.`, 'success');
+            } else {
+                showStatus(data.message || 'Failed to remove course.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error removing course:', error);
+            showStatus('Error removing course. Please try again.', 'error');
+        });
+    } else {
+        // If not saved yet, just remove from array
+        selectedCourses = selectedCourses.filter(c => {
+            if (registrationId && c.registration_id) {
+                return String(c.registration_id) !== String(registrationId);
+            }
+            return c.course_code !== code;
+        });
+        updateSelectedTable();
+        loadCourses(currentYear, currentTerm);
+    }
+}
+
+function removeAllCourses() {
+    // Filter out coordinator/head registrations and finalized courses
+    const removableCourses = selectedCourses.filter(c => {
+        if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+            return false;
+        }
+        if (c.status === 'finalized') {
+            return false;
+        }
+        return true;
+    });
+    
+    if (removableCourses.length === 0) {
+        alert('No courses can be removed. All courses are finalized or created by coordinator/head.');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to remove all ${removableCourses.length} course(s)? This action cannot be undone.`)) {
+        return;
+    }
+    
+    // Get registration IDs for courses that are saved in backend
+    const registrationIds = removableCourses
+        .filter(c => c.registration_id)
+        .map(c => c.registration_id);
+    
+    if (registrationIds.length > 0 && currentSession && currentYear && currentTerm) {
+        // Call backend to bulk deregister
+        fetch('/course-management/student/registration/remove-all-courses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session: currentSession,
+                year: currentYear,
+                term: currentTerm,
+                registration_ids: registrationIds
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove all removable courses from selectedCourses array
+                selectedCourses = selectedCourses.filter(c => {
+                    if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+                        return true; // Keep coordinator/head registrations
+                    }
+                    if (c.status === 'finalized') {
+                        return true; // Keep finalized registrations
+                    }
+                    return false; // Remove others
+                });
+                updateSelectedTable();
+                // Reload courses list and registrations
+                loadSavedRegistrations(currentSession, currentYear, currentTerm)
+                    .then(() => loadCourses(currentYear, currentTerm));
+                showStatus(`Successfully removed ${removableCourses.length} course(s) from registration.`, 'success');
+            } else {
+                showStatus(data.message || 'Failed to remove courses.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error removing courses:', error);
+            showStatus('Error removing courses. Please try again.', 'error');
+        });
+    } else {
+        // If no saved courses, just remove from array
+        selectedCourses = selectedCourses.filter(c => {
+            if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+                return true;
+            }
+            if (c.status === 'finalized') {
+                return true;
+            }
+            return false;
+        });
+        updateSelectedTable();
+        loadCourses(currentYear, currentTerm);
+        showStatus(`Successfully removed ${removableCourses.length} course(s) from registration.`, 'success');
+    }
+}
+
+function updateSelectedTable() {
+    const selectedCard = document.getElementById('selectedCard');
+    const selectedTable = document.getElementById('selectedCoursesTable');
+    const totalCreditsSpan = document.getElementById('totalCredits');
+    
+    if (selectedCourses.length === 0) {
+        selectedCard.style.display = 'none';
+        if (editSelectionBtn) editSelectionBtn.style.display = 'none';
+        setSaveRegistrationEnabled(false);
+        downloadBtn.disabled = true;
+        setSendCoordinatorEnabled(false);
+        return;
+    }
+    
+    // Check if any registration was created by coordinator/head OR finalized
+    const hasCoordinatorReg = selectedCourses.some(c => {
+        // Cannot edit if created by coordinator/head
+        if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+            return true;
+        }
+        // Cannot edit if finalized (even if registered_by is 'student' - means coordinator finalized it)
+        if (c.status === 'finalized') {
+            return true;
+        }
+        return false;
+    });
+    
+    selectedCard.style.display = 'block';
+    if (editSelectionBtn) editSelectionBtn.style.display = 'inline-block';
+    // Disable save and send buttons if coordinator/head registered any course OR if finalized
+    setSaveRegistrationEnabled(!hasCoordinatorReg);
+    setSendCoordinatorEnabled(!hasCoordinatorReg);
+    // Download button is always enabled
+    downloadBtn.disabled = false;
+    
+    let html = '';
+    let totalCredits = 0;
+    
+    selectedCourses.forEach((course, index) => {
+        const isRetake = course.remark === 'Retake' || course.remark === 'Re-retake';
+        const carryOnId = `selectedCarryOn_${course.id || index}`;
+        // Check if cannot edit: created by coordinator/head OR finalized
+        const isCoordinatorReg = (course.registered_by && (course.registered_by === 'coordinator' || course.registered_by === 'head')) || course.status === 'finalized';
+        html += `<tr>
+            <td data-label="SL">${index + 1}</td>
+            <td data-label="Course Code"><strong>${course.course_code}</strong></td>
+            <td data-label="Course Name">${course.course_name}</td>
+            <td data-label="Credit">${course.credit}</td>
+            <td data-label="Type">${course.course_type}</td>
+            <td data-label="Nature">${course.nature || 'Core'}</td>
+            <td data-label="Source Year/Term">${(course.source_year || currentYear || '-')}/${(course.source_term || currentTerm || '-')}</td>
+            <td data-label="Remarks">
+                ${isCoordinatorReg ? 
+                    `<span class="badge bg-info">${course.remark || 'Regular'}</span>` :
+                    `<select class="form-select form-select-sm" onchange="updateSelectedCourseRemark(${course.id || index}, this.value)">
+                        <option value="Regular" ${course.remark === 'Regular' ? 'selected' : ''}>Regular</option>
+                        <option value="Retake" ${course.remark === 'Retake' ? 'selected' : ''}>Retake</option>
+                        <option value="Re-retake" ${course.remark === 'Re-retake' ? 'selected' : ''}>Re-retake</option>
+                    </select>`
+                }
+            </td>
+            <td data-label="Carry On">
+                ${isCoordinatorReg ? 
+                    (isRetake && course.carry_on ? '<span class="badge bg-success">Carry On</span>' : '<span class="text-muted">-</span>') :
+                    (isRetake ? `
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="${carryOnId}" 
+                                   ${course.carry_on ? 'checked' : ''} 
+                                   onchange="updateSelectedCourseCarryOn(${course.id || index}, this.checked)">
+                            <label class="form-check-label" for="${carryOnId}">Carry On</label>
+                        </div>
+                    ` : '<span class="text-muted">-</span>')
+                }
+            </td>
+            <td data-label="Action">
+                ${isCoordinatorReg ? 
+                    '<span class="text-muted small">Read-only</span>' :
+                    `<button class="btn btn-sm btn-danger" onclick="removeCourse(${course.registration_id || 'null'}, '${course.course_code.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-trash me-1"></i>Remove
+                    </button>`
+                }
+            </td>
+        </tr>`;
+        totalCredits += parseFloat(course.credit);
+    });
+    
+    // Add total credits row
+    html += `<tr class="table-info fw-bold sr-total-row">
+        <td colspan="3" class="text-end" data-label="Summary">Total Credits:</td>
+        <td data-label="Total Credits">${totalCredits.toFixed(1)}</td>
+        <td colspan="6" data-label=""></td>
+    </tr>`;
+    
+    selectedTable.innerHTML = html;
+    totalCreditsSpan.textContent = totalCredits.toFixed(1);
+    
+    // Update "Remove All" button visibility
+    const removableCourses = selectedCourses.filter(c => {
+        if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+            return false;
+        }
+        if (c.status === 'finalized') {
+            return false;
+        }
+        return true;
+    });
+    const removeAllBtn = document.getElementById('removeAllBtn');
+    if (removeAllBtn) {
+        removeAllBtn.style.display = removableCourses.length > 0 ? 'inline-block' : 'none';
+    }
+}
+
+// UI toggle: Edit shows Available Courses + actions inside it
+if (editSelectionBtn) {
+    editSelectionBtn.addEventListener('click', function() {
+        setAvailableCoursesVisible(true);
+        const el = document.getElementById('coursesCard');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+if (hideAvailableBtn) {
+    hideAvailableBtn.addEventListener('click', function() {
+        setAvailableCoursesVisible(false);
+        const el = document.getElementById('selectedCard');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+function handleSaveRegistration() {
+    if (!currentSession || !currentYear || !currentTerm) {
+        alert('Please select session, year, and term first.');
+        return;
+    }
+    if (selectedCourses.length === 0) {
+        alert('Please select at least one course to save.');
+        return;
+    }
+    // Check if any registration was created by coordinator/head OR finalized
+    const hasCoordinatorReg = selectedCourses.some(c => {
+        if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+            return true;
+        }
+        if (c.status === 'finalized') {
+            return true;
+        }
+        return false;
+    });
+    if (hasCoordinatorReg) {
+        alert('Cannot save: Some registrations are finalized or created by coordinator/head. You can only download these registrations.');
+        return;
+    }
+    setSaveRegistrationEnabled(false);
+    setSaveRegistrationHtml('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+    fetch('/course-management/student/registration/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            session: currentSession,
+            year: currentYear,
+            term: currentTerm,
+            courses: selectedCourses
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showStatus('Registration saved successfully.', 'success');
+        } else {
+            showStatus(data.message || 'Failed to save registration.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving registration:', error);
+        showStatus('Error saving registration.', 'error');
+    })
+    .finally(() => {
+        setSaveRegistrationEnabled(true);
+        setSaveRegistrationHtml('<i class="fas fa-save me-2"></i>Save Registration');
+    });
+}
+
+document.querySelectorAll('.js-save-registration').forEach(btn => {
+    btn.addEventListener('click', handleSaveRegistration);
+});
+
+downloadBtn.addEventListener('click', function() {
+    if (selectedCourses.length === 0) {
+        alert('Please select at least one course');
+        return;
+    }
+    
+    const data = {
+        session: currentSession,
+        year: currentYear,
+        term: currentTerm,
+        courses: selectedCourses
+    };
+    
+    fetch('/course-management/student/registration/download-pdf', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        }
+        return response.json().then(err => Promise.reject(err));
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `course_registration_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    })
+    .catch(error => {
+        alert('Error downloading PDF: ' + (error.message || 'Unknown error'));
+        console.error('Error:', error);
+    });
+});
+
+function handleSendToCoordinator() {
+    if (!currentSession || !currentYear || !currentTerm) {
+        alert('Please select session, year, and term first.');
+        return;
+    }
+    if (selectedCourses.length === 0) {
+        alert('Please select at least one course to send.');
+        return;
+    }
+    // Check if any registration was created by coordinator/head OR finalized
+    const hasCoordinatorReg = selectedCourses.some(c => {
+        if (c.registered_by && (c.registered_by === 'coordinator' || c.registered_by === 'head')) {
+            return true;
+        }
+        if (c.status === 'finalized') {
+            return true;
+        }
+        return false;
+    });
+    if (hasCoordinatorReg) {
+        alert('Cannot send: Some registrations are finalized or created by coordinator/head. You can only download these registrations.');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to send this registration to the coordinator for review?')) {
+        return;
+    }
+    
+    // First save the registration
+    setSaveRegistrationEnabled(false);
+    setSendCoordinatorEnabled(false);
+    setSendCoordinatorHtml('<i class="fas fa-spinner fa-spin me-2"></i>Sending...');
+    
+    // Save first
+    fetch('/course-management/student/registration/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            session: currentSession,
+            year: currentYear,
+            term: currentTerm,
+            courses: selectedCourses
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to save registration.');
+        }
+        // Then send to coordinator
+        return fetch('/course-management/student/registration/send-to-coordinator', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session: currentSession,
+                year: currentYear,
+                term: currentTerm
+            })
+        });
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showStatus('Registration sent to coordinator successfully.', 'success');
+        } else {
+            showStatus(data.message || 'Failed to send registration.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error sending to coordinator:', error);
+        showStatus('Error sending registration to coordinator.', 'error');
+    })
+    .finally(() => {
+        setSaveRegistrationEnabled(true);
+        setSendCoordinatorEnabled(true);
+        setSendCoordinatorHtml('<i class="fas fa-paper-plane me-2"></i>Send to Co-Ordinator');
+    });
+}
+
+document.querySelectorAll('.js-send-coordinator').forEach(btn => {
+    btn.addEventListener('click', handleSendToCoordinator);
+});
+</script>
+{% endblock %}
+

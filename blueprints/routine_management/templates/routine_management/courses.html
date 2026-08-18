@@ -1,0 +1,165 @@
+{% extends "routine_management/base.html" %}
+
+{% block title %}Manage Courses{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Existing Courses</h2>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourseModal">
+                <i class="fas fa-plus me-1"></i>Add Course
+            </button>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Credit</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Core/Optional</th>
+                    <th>Syllabus Year</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr>
+                    <td>{{ course.course_code }}</td>
+                    <td>{{ course.course_name }}</td>
+                    <td>{{ course.credit }}</td>
+                    <td>{{ course.course_type }}</td>
+                    <td>{{ course.category }}</td>
+                    <td>{{ course.core_optional or '-' }}</td>
+                    <td>{{ course.syllabus_year or '-' }}</td>
+                    <td>
+                        <form action="{{ url_for('routine_management.delete_course', id=course.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this course?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Course Modal -->
+<div class="modal fade" id="addCourseModal" tabindex="-1" aria-labelledby="addCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addCourseModalLabel">
+                    <i class="fas fa-plus me-2"></i>Add New Course
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('routine_management.manage_courses') }}" id="addCourseForm">
+                    {{ form.hidden_tag() }}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.course_code.label(class="form-label") }}
+                            {{ form.course_code(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.course_name.label(class="form-label") }}
+                            {{ form.course_name(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            {{ form.credit.label(class="form-label") }}
+                            {{ form.credit(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.course_type.label(class="form-label") }}
+                            {{ form.course_type(class="form-select") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.core_optional.label(class="form-label") }}
+                            {{ form.core_optional(class="form-select") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.syllabus_year.label(class="form-label") }}
+                            {{ form.syllabus_year(class="form-control", placeholder="e.g. 2024-25") }}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addCourseModal = document.getElementById('addCourseModal');
+    const addCourseForm = document.getElementById('addCourseForm');
+    
+    // Reset form when modal is closed
+    if (addCourseModal) {
+        addCourseModal.addEventListener('hidden.bs.modal', function () {
+            if (addCourseForm) {
+                addCourseForm.reset();
+            }
+        });
+    }
+    
+    // Auto-select Category and Type based on Course Code
+    const courseCodeInput = addCourseForm ? addCourseForm.querySelector('input[name="course_code"]') : null;
+    const categorySelect = addCourseForm ? addCourseForm.querySelector('select[name="category"]') : null;
+    const courseTypeSelect = addCourseForm ? addCourseForm.querySelector('select[name="course_type"]') : null;
+    
+    if (courseCodeInput) {
+        courseCodeInput.addEventListener('input', function() {
+            const courseCode = this.value.trim();
+            
+            // Auto-select Category: Postgraduate if first digit of last 4 digits is "5"
+            if (categorySelect) {
+                const digitsOnly = courseCode.replace(/\D/g, ''); // Remove all non-digits
+                if (digitsOnly.length >= 4) {
+                    const lastFourDigits = digitsOnly.slice(-4); // Get last 4 digits
+                    const firstDigit = lastFourDigits.charAt(0);
+                    if (firstDigit === '5') {
+                        categorySelect.value = 'pg'; // Postgraduate
+                        console.log(`Auto-selected Postgraduate for course code: ${courseCode} (last 4 digits: ${lastFourDigits}, first digit: ${firstDigit})`);
+                    }
+                }
+            }
+            
+            // Auto-select Type: Sessional if last digit of course code is even
+            // Course code format: XXX 28 Law XXXX - check the last digit of the entire code
+            if (courseTypeSelect) {
+                const digitsOnly = courseCode.replace(/\D/g, ''); // Remove all non-digits
+                if (digitsOnly.length > 0) {
+                    const lastDigit = digitsOnly.charAt(digitsOnly.length - 1); // Last digit of entire course code
+                    const lastDigitNum = parseInt(lastDigit, 10);
+                    if (!isNaN(lastDigitNum) && lastDigitNum % 2 === 0) {
+                        courseTypeSelect.value = 'Sessional';
+                        console.log(`Auto-selected Sessional for course code: ${courseCode} (last digit: ${lastDigit})`);
+                    } else if (!isNaN(lastDigitNum) && lastDigitNum % 2 === 1) {
+                        // If odd, set to Theory (only if not already set)
+                        if (courseTypeSelect.value === '' || courseTypeSelect.value === 'Sessional') {
+                            courseTypeSelect.value = 'Theory';
+                            console.log(`Auto-selected Theory for course code: ${courseCode} (last digit: ${lastDigit})`);
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %} 

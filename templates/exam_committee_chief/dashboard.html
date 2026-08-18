@@ -1,0 +1,2315 @@
+{% extends "base.html" %}
+{% block title %}Exam Committee Chief Dashboard{% endblock %}
+
+{% block mobile_title %}Chief{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
+                <h1 class="mb-0">Exam Committee Chief Dashboard</h1>
+            </div>
+            <p class="text-muted mb-0">Manage Tabulators and Scrutinizers</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% if current_session and current_year and current_term %}
+            <a class="btn btn-outline-primary btn-sm"
+               href="{{ url_for('exam_committee_chief_evaluator_assignments_pdf', academic_session=current_session, year=current_year, term=current_term) }}">
+                <i class="fas fa-file-pdf me-1"></i>Download QS + Evaluator PDF
+            </a>
+            {% endif %}
+            {% if current_session or current_year or current_term %}
+            <div class="alert alert-info px-4 py-2 mb-0">
+                <div class="fw-semibold">Current Assignment Context</div>
+                <div class="small mb-0">
+                    <span><strong>Session:</strong> {{ current_session or 'N/A' }}</span>
+                    <span class="ms-3"><strong>Year:</strong> {{ current_year or 'N/A' }}</span>
+                    <span class="ms-3"><strong>Term:</strong> {{ current_term or 'N/A' }}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Exam Committee Chief Card -->
+    {% if (is_chief or member_assignments) and current_session and current_year and current_term %}
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-crown me-2"></i>Exam Committee Chief - {{ current_session }} - {{ current_year }} Year - {{ current_term }} Term</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Examination Committee Members Section -->
+                    <div class="mb-4" id="committeeMembersCard">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Examination Committee Members</h5>
+                            <div id="committeeCardActions" style="display: none;">
+                                <button type="button" class="btn btn-sm btn-light" id="editCommitteeBtn" style="pointer-events: auto; cursor: pointer; z-index: 1000;" onclick="var e = event || window.event; if(e) { e.preventDefault(); e.stopPropagation(); } try { if(typeof window.showCommitteeMembersForm === 'function') { window.showCommitteeMembersForm(); } else { alert('Edit function not available'); } } catch(err) { console.error('Error:', err); alert('Error: ' + err.message); } return false;">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </button>
+                            </div>
+                        </div>
+                        <div id="committeeMembersBody">
+                            <!-- Saved Members List View (hidden initially) -->
+                            <div id="committeeMembersListView" style="display: none;">
+                                <div class="mb-3">
+                                    <div class="mb-2">
+                                        <strong>Session:</strong> <span id="savedSession">-</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Year:</strong> <span id="savedYear">-</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Term:</strong> <span id="savedTerm">-</span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <h6 class="mb-3">Committee Chief</h6>
+                                <div id="committeeChiefList" class="mb-3"></div>
+                                <hr>
+                                <h6 class="mb-3">Internal Members</h6>
+                                <div id="savedInternalMembersList" class="mb-3">
+                                    <small class="text-muted">No internal members.</small>
+                                </div>
+                                <hr>
+                                <h6 class="mb-3">External Members</h6>
+                                <div id="savedExternalMembersList" class="mb-3">
+                                    <small class="text-muted">No external members.</small>
+                                </div>
+                                <div id="savedRemarks" class="mt-3" style="display: none;">
+                                    <hr>
+                                    <h6>Remarks</h6>
+                                    <p class="text-muted" id="savedRemarksText"></p>
+                                </div>
+                            </div>
+                            <!-- Form View (shown initially) -->
+                            <div id="committeeMembersFormView">
+                                <form id="committeeMembersForm">
+                                    <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="committee_session" class="form-label">Academic Session <span class="text-danger">*</span></label>
+                        <select class="form-select" id="committee_session" name="committee_session" required disabled>
+                            <option value="">Select Session</option>
+                            {% for session in academic_sessions %}
+                            <option value="{{ session }}" {% if session == current_session %}selected{% endif %}>{{ session }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" id="committee_session_hidden" name="committee_session" value="{{ current_session or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="committee_year" class="form-label">Year <span class="text-danger">*</span></label>
+                        <select class="form-select" id="committee_year" name="committee_year" required disabled>
+                            <option value="">Select Year</option>
+                            {% for y in tenant.year_select_options %}
+                            <option value="{{ y }}" {% if current_year == y %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" id="committee_year_hidden" name="committee_year" value="{{ current_year or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="committee_term" class="form-label">Term <span class="text-danger">*</span></label>
+                        <select class="form-select" id="committee_term" name="committee_term" required disabled>
+                            <option value="">Select Term</option>
+                            <option value="First" {% if current_term == 'First' %}selected{% endif %}>First</option>
+                            <option value="Second" {% if current_term == 'Second' %}selected{% endif %}>Second</option>
+                            <option value="Thesis Term" {% if current_term == 'Thesis Term' %}selected{% endif %}>Thesis Term</option>
+                        </select>
+                        <input type="hidden" id="committee_term_hidden" name="committee_term" value="{{ current_term or '' }}">
+                    </div>
+                    <div class="col-12">
+                        <hr>
+                        <h6 class="mb-3">Committee Chief</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3">
+                                <label for="committee_chief_select" class="form-label">Select Chief</label>
+                                <select class="form-select" id="committee_chief_select" disabled>
+                                    <option value="">Select Chief</option>
+                                    {% for teacher in teachers %}
+                                    <option value="{{ teacher.id }}" data-name="{{ teacher.name }}" data-designation="{{ teacher.designation or '' }}" data-institute="{{ teacher.institute or tenant.institute_label }}" {% if chief_info and chief_info.name == teacher.name %}selected{% endif %}>{{ teacher.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="chief_designation" class="form-label">Designation</label>
+                                <select class="form-select" id="chief_designation" disabled>
+                                    <option value="">Select Designation</option>
+                                    <option value="Professor">Professor</option>
+                                    <option value="Associate Professor">Associate Professor</option>
+                                    <option value="Assistant Professor">Assistant Professor</option>
+                                    <option value="Lecturer">Lecturer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="chief_institute" class="form-label">Institute</label>
+                                <input type="text" class="form-control" id="chief_institute" value={{ tenant.institute_label|tojson }} placeholder={{ tenant.institute_label|tojson }} disabled>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-warning w-100" id="setChiefBtn" disabled>
+                                    <i class="fas fa-crown me-1"></i>Set as Chief
+                                </button>
+                            </div>
+                        </div>
+                        <div id="chiefDisplay" class="mb-3" style="display: none;">
+                            <div class="alert alert-warning mb-0">
+                                <strong>Chief:</strong> <span id="chiefNameDisplay"></span> 
+                                (<span id="chiefDesignationDisplay"></span>, <span id="chiefInstituteDisplay"></span>)
+                                <button type="button" class="btn btn-sm btn-danger float-end" onclick="removeChief()" disabled>
+                                    <i class="fas fa-times"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <hr>
+                        <h6 class="mb-3">Internal Members</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3">
+                                <label for="committee_member_select" class="form-label">Select Member</label>
+                                <select class="form-select" id="committee_member_select">
+                                    <option value="">Select a member</option>
+                                    {% for teacher in teachers %}
+                                    <option value="{{ teacher.id }}" data-name="{{ teacher.name }}" data-designation="{{ teacher.designation or '' }}" data-institute="{{ teacher.institute or tenant.institute_label }}">{{ teacher.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="internal_member_designation" class="form-label">Designation</label>
+                                <select class="form-select" id="internal_member_designation">
+                                    <option value="">Select Designation</option>
+                                    <option value="Professor">Professor</option>
+                                    <option value="Associate Professor">Associate Professor</option>
+                                    <option value="Assistant Professor">Assistant Professor</option>
+                                    <option value="Lecturer">Lecturer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="internal_member_institute" class="form-label">Institute</label>
+                                <input type="text" class="form-control" id="internal_member_institute" value={{ tenant.institute_label|tojson }} placeholder={{ tenant.institute_label|tojson }}>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary w-100" id="addMemberBtn">
+                                    <i class="fas fa-plus me-1"></i>Add
+                                </button>
+                            </div>
+                        </div>
+                        <div id="selectedMembersList" class="mb-3">
+                            <small class="text-muted">No members selected yet.</small>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <hr>
+                        <h6 class="mb-3">External Members</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-3">
+                                <label for="external_name" class="form-label">Name <span class="text-danger">*</span></label>
+                                <select class="form-select" id="external_name">
+                                    <option value="">Select External Teacher</option>
+                                    {% for teacher in external_teachers %}
+                                    <option value="{{ teacher.name }}" data-designation="{{ teacher.designation or '' }}" data-institute="{{ teacher.institute or '' }}">{{ teacher.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Select from external teacher list</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="external_designation" class="form-label">Designation <span class="text-danger">*</span></label>
+                                <select class="form-select" id="external_designation">
+                                    <option value="">Select Designation</option>
+                                    <option value="Professor">Professor</option>
+                                    <option value="Associate Professor">Associate Professor</option>
+                                    <option value="Assistant Professor">Assistant Professor</option>
+                                    <option value="Lecturer">Lecturer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="external_institute" class="form-label">Institute <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="external_institute" value="" placeholder="Enter Institute">
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="button" class="btn btn-success w-100" id="addExternalBtn">
+                                    <i class="fas fa-plus me-1"></i>Add
+                                </button>
+                            </div>
+                        </div>
+                        <div id="externalMembersList" class="mb-3">
+                            <small class="text-muted">No external members added yet.</small>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label for="committee_remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" id="committee_remarks" name="committee_remarks" rows="2" placeholder="Additional notes (optional)"></textarea>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="submit" class="btn btn-warning text-dark">
+                                            <i class="fas fa-save me-2"></i>Save Committee Members
+                                        </button>
+                                        <button type="reset" class="btn btn-outline-secondary">
+                                            <i class="fas fa-redo me-2"></i>Reset
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assign Exam Paper Evaluator -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Assign Exam Paper Evaluator</h5>
+                            {% if current_session and current_year and current_term %}
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{{ url_for('exam_committee_chief_evaluator_assignments_pdf', academic_session=current_session, year=current_year, term=current_term) }}">
+                                <i class="fas fa-file-pdf me-1"></i>Download Question Setter + Evaluator PDF
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Assign teachers to evaluate exam papers for subjects from the curriculum. Each subject has Part A and Part B.
+                        </div>
+                        <div id="evaluatorAssignmentSection">
+                            <div id="subjectsListContainer" style="display: none;">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Course Code</th>
+                                                <th>Course Name</th>
+                                                <th>Part A<br><small class="text-muted">Evaluator / Question Setter</small></th>
+                                                <th>Part B<br><small class="text-muted">Evaluator / Question Setter</small></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="subjectsTableBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="subjectsLoading" class="text-center" style="display: none;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading subjects...</p>
+                            </div>
+                            <div id="subjectsError" class="alert alert-danger" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Assign Tabulator/Scrutinizer Form -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="fas fa-user-plus me-2"></i>Assign Scrutinizer or Tabulator</h5>
+                        <form id="assignDutyForm">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="duty_type" class="form-label">Duty Type <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="duty_type" name="duty_type" required>
+                                        <option value="">Select Duty Type</option>
+                                        <option value="scrutinizer">Scrutinizer</option>
+                                        <option value="tabulator">Tabulator</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="teacher" class="form-label">Teacher <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="teacher" name="teacher" required>
+                                        <option value="">Select Teacher</option>
+                                        {% for teacher in teachers %}
+                                        <option value="{{ teacher.id }}">{{ teacher.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <!-- Hidden fields for session, year, term - auto-filled from chief assignment -->
+                                <input type="hidden" id="academic_session" name="academic_session" value="{{ current_session or '' }}">
+                                <input type="hidden" id="year" name="year" value="{{ current_year or '' }}">
+                                <input type="hidden" id="term" name="term" value="{{ current_term or '' }}">
+                                <div class="col-12" id="entryField" style="display:none;">
+                                    <label for="exam_entries" class="form-label">Submitted Courses (select one or more)</label>
+                                    {% if available_entries %}
+                                    <select class="form-select" id="exam_entries" name="exam_entries" multiple size="6">
+                                        {% for entry in available_entries %}
+                                        <option value="{{ entry.id }}" data-owner-teacher-id="{{ entry.owner_teacher_id or '' }}">
+                                            {{ entry.course_code }} - {{ entry.course_name }} [Section {{ entry.section }}] (Teacher: {{ entry.owner }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="form-text text-muted">
+                                        Listed subjects are submitted marksheets awaiting scrutiny.
+                                    </small>
+                                    {% else %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-info-circle me-2"></i>No submitted courses available yet. Evaluators must submit marks first.
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12">
+                                    <label for="remarks" class="form-label">Remarks</label>
+                                    <textarea class="form-control" id="remarks" name="remarks" rows="2" placeholder="Additional notes (optional)"></textarea>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check me-2"></i>Assign Duty
+                                </button>
+                                <button type="reset" class="btn btn-outline-secondary">
+                                    <i class="fas fa-redo me-2"></i>Reset
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Assigned Scrutinizers -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="fas fa-list me-2"></i>Assigned Scrutinizers</h5>
+                        {% if scrutinizers %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>SL</th>
+                                        <th>Teacher</th>
+                                        <th>Session</th>
+                                        <th>Year</th>
+                                        <th>Term</th>
+                                        <th>Batch</th>
+                                        <th>Course</th>
+                                        <th>Part</th>
+                                        <th>Remarks</th>
+                                        <th>Assigned On</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for scr in scrutinizers %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ scr.assigned_teacher.name }}</td>
+                                        <td>{{ scr.academic_session or '-' }}</td>
+                                        <td>{{ scr.year or '-' }}</td>
+                                        <td>{{ scr.term or '-' }}</td>
+                                        <td>{{ scr.batch or '-' }}</td>
+                                        <td>{{ scr.course_code or '-' }}</td>
+                                        <td>{{ scrutinizer_part_labels.get(scr.id, '-') }}</td>
+                                        <td>{{ scr.remarks or '-' }}</td>
+                                        <td>{{ scr.created_at|bd('%Y-%m-%d') if scr.created_at else '-' }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger" onclick="removeAssignment({{ scr.id }})">
+                                                <i class="fas fa-trash me-1"></i>Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No scrutinizers assigned yet.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Assigned Tabulators -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="fas fa-list me-2"></i>Assigned Tabulators</h5>
+                        {% if tabulators %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>SL</th>
+                                        <th>Teacher</th>
+                                        <th>Session</th>
+                                        <th>Year</th>
+                                        <th>Term</th>
+                                        <th>Remarks</th>
+                                        <th>Assigned On</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tab in tabulators %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ tab.assigned_teacher.name }}</td>
+                                        <td>{{ tab.academic_session or '-' }}</td>
+                                        <td>{{ tab.year or '-' }}</td>
+                                        <td>{{ tab.term or '-' }}</td>
+                                        <td>{{ tab.remarks or '-' }}</td>
+                                        <td>{{ tab.created_at|bd('%Y-%m-%d') if tab.created_at else '-' }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger" onclick="removeAssignment({{ tab.id }})">
+                                                <i class="fas fa-trash me-1"></i>Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No tabulators assigned yet.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Saved Custom Remuneration Forms -->
+                    <div class="mb-0">
+                        <!-- Create Remuneration Statement Button -->
+                        <div class="mb-3">
+                            {% if saved_remuneration_forms %}
+                            <button class="btn btn-success" disabled title="A remuneration form already exists for this committee. Delete the saved form below to create a new one.">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>Create Remuneration Statement
+                            </button>
+                            <div class="form-text text-muted mt-1">
+                                <i class="fas fa-info-circle me-1"></i>A saved remuneration form already exists. Delete it below to create a new one.
+                            </div>
+                            {% else %}
+                            <a href="{{ url_for('exam_committee_chief_custom_remuneration', session=current_session, year=current_year, term=current_term) if current_session and current_year and current_term else url_for('exam_committee_chief_custom_remuneration') }}" class="btn btn-success">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>Create Remuneration Statement
+                            </a>
+                            {% endif %}
+                        </div>
+                        <h5 class="mb-3"><i class="fas fa-file-invoice-dollar me-2"></i>Saved Remuneration Forms</h5>
+                        {% if saved_remuneration_forms %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>SL</th>
+                                        <th>Title</th>
+                                        <th>Session</th>
+                                        <th>Year</th>
+                                        <th>Term</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Updated</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for form in saved_remuneration_forms %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td><strong>{{ form.title or 'Untitled' }}</strong></td>
+                                        <td>{{ form.academic_year or '-' }}</td>
+                                        <td>{{ form.year or '-' }}</td>
+                                        <td>{{ form.term or '-' }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if form.status == 'draft' %}warning{% elif form.status == 'archived' %}info{% else %}success{% endif %}">
+                                                {{ form.status.title() if form.status else 'Draft' }}
+                                            </span>
+                                        </td>
+                                        <td>{{ form.created_at|bd('%Y-%m-%d %H:%M') if form.created_at else '-' }}</td>
+                                        <td>{{ form.updated_at|bd('%Y-%m-%d %H:%M') if form.updated_at else '-' }}</td>
+                                        <td>
+                                            <div class="d-flex gap-1">
+                                                {% if form.status == 'archived' %}
+                                                <button class="btn btn-sm btn-primary" disabled title="Archived forms cannot be edited. Please restore first.">
+                                                    <i class="fas fa-edit me-1"></i>Edit
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" disabled title="Archived forms cannot be deleted. Please restore first.">
+                                                    <i class="fas fa-trash me-1"></i>Delete
+                                                </button>
+                                                {% else %}
+                                                <a href="{{ url_for('exam_committee_chief_custom_remuneration', form_id=form.id) }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-edit me-1"></i>Edit
+                                                </a>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteRemunerationForm({{ form.id }}, '{{ form.title or 'Untitled' }}')">
+                                                    <i class="fas fa-trash me-1"></i>Delete
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No saved remuneration forms yet. 
+                            <a href="{{ url_for('exam_committee_chief_custom_remuneration', session=current_session, year=current_year, term=current_term) if current_session and current_year and current_term else url_for('exam_committee_chief_custom_remuneration') }}" class="alert-link">Create a new form</a>.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const dutyTypeSelect = document.getElementById('duty_type');
+const teacherSelect = document.getElementById('teacher');
+const entrySelect = document.getElementById('exam_entries');
+const committeeTeachers = {{ committee_teacher_options|tojson }};
+const allTeacherOptions = [];
+Array.from(teacherSelect.options).forEach(opt => {
+    if (opt.value) {
+        allTeacherOptions.push({ id: opt.value, name: opt.textContent.trim() });
+    }
+});
+
+const fieldWrappers = {
+    entry: document.getElementById('entryField')
+};
+
+function toggleField(wrapper, show) {
+    if (!wrapper) return;
+    wrapper.style.display = show ? '' : 'none';
+    if (!show) {
+        const inputs = wrapper.querySelectorAll('select, input');
+        inputs.forEach(input => input.value = '');
+    }
+}
+
+function setRequired(input, isRequired) {
+    if (!input) return;
+    input.required = isRequired;
+}
+
+function populateTeacherSelect(teachers) {
+    const currentValue = teacherSelect.value;
+    teacherSelect.innerHTML = '<option value="">Select Teacher</option>';
+    teachers.forEach(teacher => {
+        teacherSelect.add(new Option(teacher.name, String(teacher.id)));
+    });
+    if (currentValue && [...teacherSelect.options].some(option => option.value === currentValue)) {
+        teacherSelect.value = currentValue;
+    }
+}
+
+function updateTeacherOptionsForDutyType() {
+    const dutyType = dutyTypeSelect.value;
+    if (dutyType === 'scrutinizer' || dutyType === 'tabulator') {
+        if (!committeeTeachers.length) {
+            teacherSelect.innerHTML = '<option value="">No committee members found</option>';
+            teacherSelect.disabled = true;
+        } else {
+            populateTeacherSelect(committeeTeachers);
+            teacherSelect.disabled = false;
+        }
+    } else {
+        populateTeacherSelect(allTeacherOptions);
+        teacherSelect.disabled = false;
+    }
+}
+
+function updateDutyFieldVisibility() {
+    const dutyType = dutyTypeSelect.value;
+    toggleField(fieldWrappers.entry, false);
+    updateTeacherOptionsForDutyType();
+    
+    // Session, Year, Term are now hidden and auto-filled from chief assignment
+    // Only show entry field for scrutinizer
+    if (dutyType === 'scrutinizer') {
+        toggleField(fieldWrappers.entry, true);
+        if (entrySelect && entrySelect.options.length === 0) {
+            entrySelect.disabled = true;
+        }
+    }
+}
+
+dutyTypeSelect.addEventListener('change', updateDutyFieldVisibility);
+updateDutyFieldVisibility();
+
+// Filter exam entries to hide entries where owner matches selected teacher
+function filterExamEntries() {
+    if (!entrySelect) return;
+    
+    const selectedTeacherId = teacherSelect.value;
+    const options = entrySelect.options;
+    
+    for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        const ownerTeacherId = option.getAttribute('data-owner-teacher-id');
+        
+        // Hide option if owner teacher matches selected teacher
+        if (selectedTeacherId && ownerTeacherId && ownerTeacherId === selectedTeacherId) {
+            option.style.display = 'none';
+            // Deselect if it was selected
+            option.selected = false;
+        } else {
+            option.style.display = '';
+        }
+    }
+}
+
+// Filter entries when teacher is selected
+teacherSelect.addEventListener('change', function() {
+    if (dutyTypeSelect.value === 'scrutinizer') {
+        filterExamEntries();
+    }
+});
+
+// Also filter when duty type changes to scrutinizer
+dutyTypeSelect.addEventListener('change', function() {
+    if (dutyTypeSelect.value === 'scrutinizer') {
+        filterExamEntries();
+    } else {
+        // Show all options when not scrutinizer
+        if (entrySelect) {
+            const options = entrySelect.options;
+            for (let i = 0; i < options.length; i++) {
+                options[i].style.display = '';
+            }
+        }
+    }
+});
+
+document.getElementById('assignDutyForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const dutyType = dutyTypeSelect.value;
+    const teacherId = teacherSelect.value;
+    // Session, Year, Term are auto-filled from chief assignment (hidden fields)
+    const academicSession = document.getElementById('academic_session').value;
+    const year = document.getElementById('year').value;
+    const term = document.getElementById('term').value;
+    const remarks = document.getElementById('remarks').value.trim();
+    const selectedEntries = entrySelect ? Array.from(entrySelect.selectedOptions).map(opt => opt.value).filter(Boolean) : [];
+    
+    if (!dutyType || !teacherId) {
+        alert('Please select duty type and teacher');
+        return;
+    }
+    
+    // Validate that session, year, term are available (from chief assignment)
+    if (!academicSession || !year || !term) {
+        alert('Error: Session, Year, and Term are not set. Please ensure you are assigned as Exam Committee Chief.');
+        return;
+    }
+    
+    if (dutyType === 'scrutinizer' && !selectedEntries.length) {
+        alert('Please select at least one submitted course for Scrutinizer duty.');
+        return;
+    }
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Assigning...';
+    
+    fetch('/exam-committee-chief/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            duty_type: dutyType,
+            teacher_id: teacherId,
+            academic_session: academicSession,
+            year: year,
+            term: term,
+            exam_entry_ids: selectedEntries,
+            remarks: remarks
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Duty assigned successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to assign duty');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error assigning duty');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+function removeAssignment(assignmentId) {
+    if (!confirm('Are you sure you want to remove this duty assignment?')) {
+        return;
+    }
+    
+    fetch(`/head/assign-duties/api/remove/${assignmentId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Duty assignment removed successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to remove duty assignment');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error removing duty assignment');
+    });
+}
+
+// Committee Members Management
+let selectedChief = null; // {id, name, designation, institute}
+let selectedInternalMembers = []; // [{id, name, designation, institute}]
+let selectedExternalMembers = []; // [{name, designation, institute}]
+
+// Set Chief
+document.getElementById('setChiefBtn').addEventListener('click', function() {
+    const select = document.getElementById('committee_chief_select');
+    const selectedOption = select.options[select.selectedIndex];
+    const designation = document.getElementById('chief_designation').value.trim();
+    const institute = document.getElementById('chief_institute').value.trim();
+    
+    if (!selectedOption.value) {
+        alert('Please select a chief');
+        return;
+    }
+    
+    if (!designation) {
+        alert('Please select a designation');
+        return;
+    }
+    
+    const chiefId = selectedOption.value;
+    const chiefName = selectedOption.getAttribute('data-name');
+    
+    selectedChief = {
+        id: chiefId,
+        name: chiefName,
+        designation: designation,
+        institute: institute || {{ tenant.institute_label|tojson }}
+    };
+    
+    updateChiefDisplay();
+});
+
+// Remove Chief
+function removeChief() {
+    selectedChief = null;
+    updateChiefDisplay();
+    document.getElementById('committee_chief_select').value = '';
+    document.getElementById('chief_designation').value = '';
+    const chiefInstituteInput = document.getElementById('chief_institute');
+    if (chiefInstituteInput) chiefInstituteInput.value = {{ tenant.institute_label|tojson }};
+}
+
+// Update Chief Display
+function updateChiefDisplay() {
+    const displayDiv = document.getElementById('chiefDisplay');
+    if (selectedChief) {
+        const chiefNameDisplay = document.getElementById('chiefNameDisplay');
+        const chiefDesignationDisplay = document.getElementById('chiefDesignationDisplay');
+        const chiefInstituteDisplay = document.getElementById('chiefInstituteDisplay');
+        
+        if (chiefNameDisplay) chiefNameDisplay.textContent = selectedChief.name;
+        if (chiefDesignationDisplay) chiefDesignationDisplay.textContent = selectedChief.designation || 'No designation';
+        if (chiefInstituteDisplay) chiefInstituteDisplay.textContent = selectedChief.institute || {{ tenant.institute_label|tojson }};
+        
+        if (displayDiv) displayDiv.style.display = 'block';
+    } else {
+        if (displayDiv) displayDiv.style.display = 'none';
+    }
+}
+
+// Auto-fill chief designation and institute when teacher is selected
+document.addEventListener('DOMContentLoaded', function() {
+    const chiefSelect = document.getElementById('committee_chief_select');
+    if (chiefSelect) {
+        chiefSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                // Get from data attributes first (faster)
+                const designation = selectedOption.getAttribute('data-designation') || '';
+                const institute = selectedOption.getAttribute('data-institute') || {{ tenant.institute_label|tojson }};
+                
+                // Update fields
+                const designationSelect = document.getElementById('chief_designation');
+                const instituteInput = document.getElementById('chief_institute');
+                
+                if (designationSelect && designation) {
+                    designationSelect.value = designation;
+                }
+                if (instituteInput) {
+                    instituteInput.value = institute;
+                }
+                
+                // If data attributes don't have values, fetch from API
+                if (!designation || !institute || institute === {{ tenant.institute_label|tojson }}) {
+                    fetch(`/api/get-teacher-info/${selectedOption.value}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.teacher) {
+                                if (designationSelect && data.teacher.designation) {
+                                    designationSelect.value = data.teacher.designation;
+                                }
+                    if (instituteInput) {
+                        instituteInput.value = data.teacher.institute || '';
+                    }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching teacher info:', error);
+                        });
+                }
+            } else {
+                // Reset fields if no selection
+                const designationSelect = document.getElementById('chief_designation');
+                const instituteInput = document.getElementById('chief_institute');
+                if (designationSelect) designationSelect.value = '';
+                if (instituteInput) instituteInput.value = {{ tenant.institute_label|tojson }};
+            }
+        });
+    }
+    
+    {% if chief_info %}
+    const chiefSelect2 = document.getElementById('committee_chief_select');
+    if (chiefSelect2 && savedCommitteeData.chief) {
+        const chiefOption = Array.from(chiefSelect2.options).find(opt => 
+            opt.value == savedCommitteeData.chief.id || 
+            opt.getAttribute('data-name') === savedCommitteeData.chief.name
+        );
+        if (chiefOption) {
+            chiefSelect2.value = chiefOption.value;
+            // Trigger change event to auto-fill
+            chiefSelect2.dispatchEvent(new Event('change'));
+        }
+    }
+    {% endif %}
+    
+    // Load saved chief if available in savedCommitteeData
+    if (savedCommitteeData.chief) {
+        selectedChief = savedCommitteeData.chief;
+        if (!selectedChief.institute) {
+            selectedChief.institute = {{ tenant.institute_label|tojson }};
+        }
+        updateChiefDisplay();
+    }
+    
+    // Auto-fill external member designation and institute when external teacher is selected
+    const externalNameInput = document.getElementById('external_name');
+    if (externalNameInput) {
+        const setExternalDesignationValue = (designationValue) => {
+            const designationSelect = document.getElementById('external_designation');
+            if (!designationSelect || !designationValue) return;
+            const hasOption = Array.from(designationSelect.options).some(opt => opt.value === designationValue);
+            if (!hasOption) {
+                const option = document.createElement('option');
+                option.value = designationValue;
+                option.textContent = designationValue;
+                designationSelect.appendChild(option);
+            }
+            designationSelect.value = designationValue;
+        };
+        const applySelectedExternalInfo = function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption || !selectedOption.value) return;
+
+            const designation = selectedOption.getAttribute('data-designation') || '';
+            const institute = selectedOption.getAttribute('data-institute') || '';
+
+            if (designation) {
+                setExternalDesignationValue(designation);
+            }
+            const instituteInput = document.getElementById('external_institute');
+            if (instituteInput) {
+                instituteInput.value = institute;
+            }
+        };
+
+        externalNameInput.addEventListener('change', applySelectedExternalInfo);
+    }
+});
+
+// Auto-fill internal member designation and institute when teacher is selected
+document.addEventListener('DOMContentLoaded', function() {
+    const internalMemberSelect = document.getElementById('committee_member_select');
+    if (internalMemberSelect) {
+        internalMemberSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                // Get from data attributes
+                const designation = selectedOption.getAttribute('data-designation') || '';
+                const institute = selectedOption.getAttribute('data-institute') || {{ tenant.institute_label|tojson }};
+                
+                const designationSelect = document.getElementById('internal_member_designation');
+                const instituteInput = document.getElementById('internal_member_institute');
+                
+                if (designationSelect && designation) {
+                    designationSelect.value = designation;
+                }
+                if (instituteInput) {
+                    instituteInput.value = institute;
+                }
+                
+                // If not in data attributes, fetch from API
+                if (!designation || !institute || institute === {{ tenant.institute_label|tojson }}) {
+                    fetch(`/api/get-teacher-info/${selectedOption.value}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.teacher) {
+                                if (designationSelect && data.teacher.designation) {
+                                    designationSelect.value = data.teacher.designation;
+                                }
+                    if (instituteInput) {
+                        instituteInput.value = data.teacher.institute || '';
+                    }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching teacher info:', error);
+                        });
+                }
+            }
+        });
+    }
+});
+
+// Add Internal Member
+document.getElementById('addMemberBtn').addEventListener('click', function() {
+    const select = document.getElementById('committee_member_select');
+    const selectedOption = select.options[select.selectedIndex];
+    const designationSelect = document.getElementById('internal_member_designation');
+    const instituteInput = document.getElementById('internal_member_institute');
+    
+    if (!selectedOption.value) {
+        alert('Please select a member');
+        return;
+    }
+    
+    if (!designationSelect.value) {
+        alert('Please select a designation');
+        return;
+    }
+    
+    const memberId = selectedOption.value;
+    const memberName = selectedOption.getAttribute('data-name');
+    
+    // Check if already added
+    if (selectedInternalMembers.find(m => m.id === memberId)) {
+        alert('This member is already added');
+        return;
+    }
+    
+    const designation = designationSelect.value.trim();
+    const institute = instituteInput.value.trim() || {{ tenant.institute_label|tojson }};
+    
+    selectedInternalMembers.push({ 
+        id: memberId, 
+        name: memberName,
+        designation: designation,
+        institute: institute
+    });
+    updateInternalMembersList();
+    select.value = ''; // Reset dropdown
+    designationSelect.value = ''; // Reset designation dropdown
+    instituteInput.value = {{ tenant.institute_label|tojson }}; // Reset to default
+});
+
+// Add External Member
+document.getElementById('addExternalBtn').addEventListener('click', function() {
+    const externalNameEl = document.getElementById('external_name');
+    const designationSelect = document.getElementById('external_designation');
+    const instituteInput = document.getElementById('external_institute');
+    const name = externalNameEl.value.trim();
+    const designation = designationSelect.value.trim();
+    const institute = instituteInput.value.trim();
+    
+    if (!name || !designation || !institute) {
+        alert('Please fill all fields (Name, Designation, Institute)');
+        return;
+    }
+    
+    // Check if already added (by name)
+    if (selectedExternalMembers.find(m => m.name.toLowerCase() === name.toLowerCase())) {
+        alert('This external member is already added');
+        return;
+    }
+    
+    selectedExternalMembers.push({ name, designation, institute });
+    updateExternalMembersList();
+    
+    // Clear inputs
+    externalNameEl.value = '';
+    designationSelect.value = '';
+    instituteInput.value = '';
+});
+
+// Update Internal Members List Display
+function updateInternalMembersList() {
+    const listDiv = document.getElementById('selectedMembersList');
+    
+    if (selectedInternalMembers.length === 0) {
+        listDiv.innerHTML = '<small class="text-muted">No members selected yet.</small>';
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    selectedInternalMembers.forEach((member, index) => {
+        html += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <strong><i class="fas fa-user me-2"></i>${member.name}</strong><br>
+                        <small class="text-muted">${member.designation || 'No designation'}, ${member.institute || {{ tenant.institute_label|tojson }}}</small>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="editInternalMember(${index})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeInternalMember(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    listDiv.innerHTML = html;
+}
+
+// Edit Internal Member designation and institute
+function editInternalMember(index) {
+    const member = selectedInternalMembers[index];
+    const newDesignation = prompt('Enter Designation (Professor/Associate Professor/Assistant Professor/Lecturer):', member.designation || '');
+    if (newDesignation !== null && newDesignation !== '') {
+        selectedInternalMembers[index].designation = newDesignation;
+        const newInstitute = prompt('Enter Institute:', member.institute || {{ tenant.institute_label|tojson }});
+        if (newInstitute !== null) {
+            selectedInternalMembers[index].institute = newInstitute || {{ tenant.institute_label|tojson }};
+        }
+        updateInternalMembersList();
+    }
+}
+
+// Update External Members List Display
+function updateExternalMembersList() {
+    const listDiv = document.getElementById('externalMembersList');
+    
+    if (selectedExternalMembers.length === 0) {
+        listDiv.innerHTML = '<small class="text-muted">No external members added yet.</small>';
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    selectedExternalMembers.forEach((member, index) => {
+        html += `
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong><i class="fas fa-user-tie me-2"></i>${member.name}</strong><br>
+                        <small class="text-muted">${member.designation}, ${member.institute}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeExternalMember(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    listDiv.innerHTML = html;
+}
+
+// Remove Internal Member
+function removeInternalMember(index) {
+    selectedInternalMembers.splice(index, 1);
+    updateInternalMembersList();
+}
+
+// Remove External Member
+function removeExternalMember(index) {
+    selectedExternalMembers.splice(index, 1);
+    updateExternalMembersList();
+}
+
+// Committee Members Form Handler
+document.getElementById('committeeMembersForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Get values from hidden fields (since visible fields are disabled)
+    const session = document.getElementById('committee_session_hidden')?.value || document.getElementById('committee_session').value;
+    const year = document.getElementById('committee_year_hidden')?.value || document.getElementById('committee_year').value;
+    const term = document.getElementById('committee_term_hidden')?.value || document.getElementById('committee_term').value;
+    const remarks = document.getElementById('committee_remarks').value.trim();
+    // If user selected an external teacher but forgot clicking "Add",
+    // auto-add it before validation.
+    const pendingExternalName = document.getElementById('external_name')?.value.trim() || '';
+    const pendingExternalDesignation = document.getElementById('external_designation')?.value.trim() || '';
+    const pendingExternalInstitute = document.getElementById('external_institute')?.value.trim() || '';
+    if (
+        pendingExternalName &&
+        pendingExternalDesignation &&
+        pendingExternalInstitute &&
+        !selectedExternalMembers.find(m => m.name.toLowerCase() === pendingExternalName.toLowerCase())
+    ) {
+        selectedExternalMembers.push({
+            name: pendingExternalName,
+            designation: pendingExternalDesignation,
+            institute: pendingExternalInstitute
+        });
+        updateExternalMembersList();
+    }
+    
+    if (!session || !year || !term) {
+        alert('Please select Academic Session, Year, and Term');
+        return;
+    }
+    
+    if (!selectedChief && selectedInternalMembers.length === 0 && selectedExternalMembers.length === 0) {
+        alert('Please add at least the Chief or one committee member (internal or external)');
+        return;
+    }
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    
+    fetch('/exam-committee-chief/save-committee-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            academic_session: session,
+            year: year,
+            term: term,
+            chief: selectedChief,
+            internal_members: selectedInternalMembers,
+            external_members: selectedExternalMembers,
+            remarks: remarks
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Committee members saved successfully!');
+            // Reload page to show minimized list view with fresh data
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to save committee members');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving committee members');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+// Show Committee Members List View
+function showCommitteeMembersList() {
+    const formView = document.getElementById('committeeMembersFormView');
+    const listView = document.getElementById('committeeMembersListView');
+    const actionsDiv = document.getElementById('committeeCardActions');
+    
+    // Update saved data display
+    const savedSessionEl = document.getElementById('savedSession');
+    const savedYearEl = document.getElementById('savedYear');
+    const savedTermEl = document.getElementById('savedTerm');
+    
+    if (savedSessionEl) savedSessionEl.textContent = savedCommitteeData.session || '-';
+    if (savedYearEl) savedYearEl.textContent = savedCommitteeData.year || '-';
+    if (savedTermEl) savedTermEl.textContent = savedCommitteeData.term || '-';
+    
+    // Show Chief
+    let chiefHtml = '';
+    if (savedCommitteeData.chief && savedCommitteeData.chief.name) {
+        const designation = savedCommitteeData.chief.designation || 'No designation';
+        const institute = savedCommitteeData.chief.institute || {{ tenant.institute_label|tojson }};
+        chiefHtml = `
+            <div class="list-group-item">
+                <i class="fas fa-crown me-2 text-warning"></i><strong>${savedCommitteeData.chief.name}</strong>
+                <br><small class="text-muted">${designation}, ${institute}</small>
+            </div>
+        `;
+        const committeeChiefListEl = document.getElementById('committeeChiefList');
+        if (committeeChiefListEl) {
+            committeeChiefListEl.innerHTML = `<div class="list-group">${chiefHtml}</div>`;
+        }
+    } else {
+        const committeeChiefListEl = document.getElementById('committeeChiefList');
+        if (committeeChiefListEl) {
+            committeeChiefListEl.innerHTML = '<small class="text-muted">No chief assigned.</small>';
+        }
+    }
+    
+    // Show Internal Members
+    let internalHtml = '';
+    if (savedCommitteeData.internal && savedCommitteeData.internal.length > 0) {
+        savedCommitteeData.internal.forEach(member => {
+            const designation = member.designation || 'No designation';
+            const institute = member.institute || {{ tenant.institute_label|tojson }};
+            internalHtml += `
+                <div class="list-group-item">
+                    <i class="fas fa-user me-2"></i><strong>${member.name}</strong>
+                    <br><small class="text-muted">${designation}, ${institute}</small>
+                </div>
+            `;
+        });
+        const savedInternalMembersListEl = document.getElementById('savedInternalMembersList');
+        if (savedInternalMembersListEl) {
+            savedInternalMembersListEl.innerHTML = `<div class="list-group">${internalHtml}</div>`;
+        }
+    } else {
+        const savedInternalMembersListEl = document.getElementById('savedInternalMembersList');
+        if (savedInternalMembersListEl) {
+            savedInternalMembersListEl.innerHTML = '<small class="text-muted">No internal members.</small>';
+        }
+    }
+    
+    // Show External Members
+    let externalHtml = '';
+    if (savedCommitteeData.external && savedCommitteeData.external.length > 0) {
+        savedCommitteeData.external.forEach(member => {
+            externalHtml += `
+                <div class="list-group-item">
+                    <strong><i class="fas fa-user-tie me-2"></i>${member.name}</strong><br>
+                    <small class="text-muted">${member.designation}, ${member.institute}</small>
+                </div>
+            `;
+        });
+        const savedExternalMembersListEl = document.getElementById('savedExternalMembersList');
+        if (savedExternalMembersListEl) {
+            savedExternalMembersListEl.innerHTML = `<div class="list-group">${externalHtml}</div>`;
+        }
+    } else {
+        const savedExternalMembersListEl = document.getElementById('savedExternalMembersList');
+        if (savedExternalMembersListEl) {
+            savedExternalMembersListEl.innerHTML = '<small class="text-muted">No external members.</small>';
+        }
+    }
+    
+    // Show Remarks
+    const savedRemarksTextEl = document.getElementById('savedRemarksText');
+    const savedRemarksEl = document.getElementById('savedRemarks');
+    if (savedCommitteeData.remarks) {
+        if (savedRemarksTextEl) savedRemarksTextEl.textContent = savedCommitteeData.remarks;
+        if (savedRemarksEl) savedRemarksEl.style.display = 'block';
+    } else {
+        if (savedRemarksEl) savedRemarksEl.style.display = 'none';
+    }
+    
+    // Show/Hide views
+    formView.style.display = 'none';
+    listView.style.display = 'block';
+    if (actionsDiv) {
+        actionsDiv.style.display = 'flex';
+        // Always ensure edit button is functional - use reliable method
+        setTimeout(function() {
+            ensureEditButtonWorks();
+        }, 50);
+    }
+}
+
+// Reliable function to ensure edit button always works
+function ensureEditButtonWorks() {
+    const editBtn = document.getElementById('editCommitteeBtn');
+    if (!editBtn) {
+        setTimeout(ensureEditButtonWorks, 100);
+        return;
+    }
+    
+    // Always ensure button is enabled
+    editBtn.disabled = false;
+    editBtn.removeAttribute('disabled');
+    
+    // Remove all existing event listeners by cloning
+    const newBtn = editBtn.cloneNode(true);
+    editBtn.parentNode.replaceChild(newBtn, editBtn);
+    
+    // Get the fresh button
+    const freshBtn = document.getElementById('editCommitteeBtn');
+    if (!freshBtn) {
+        console.error('Button not found after clone');
+        return;
+    }
+    
+    // Ensure enabled
+    freshBtn.disabled = false;
+    freshBtn.removeAttribute('disabled');
+    
+    // Set inline onclick as primary handler - use window object for reliability
+    freshBtn.setAttribute('onclick', 'var e = event || window.event; if(e) { e.preventDefault(); e.stopPropagation(); } try { if(typeof window.showCommitteeMembersForm === "function") { window.showCommitteeMembersForm(); } else { alert("Edit function not available. Please refresh the page."); } } catch(err) { console.error("Error in edit button:", err); alert("Error: " + err.message); } return false;');
+    
+    // Also add event listener as backup - use both capture and bubble
+    freshBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            if (typeof window.showCommitteeMembersForm === 'function') {
+                window.showCommitteeMembersForm();
+            } else {
+                alert('Edit function not available. Please refresh the page.');
+            }
+        } catch(err) {
+            console.error('Error in edit button click:', err);
+            alert('Error: ' + err.message);
+        }
+        return false;
+    }, true); // Use capture phase
+    
+    // Also add in bubble phase for extra safety
+    freshBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            if (typeof window.showCommitteeMembersForm === 'function') {
+                window.showCommitteeMembersForm();
+            }
+        } catch(err) {
+            console.error('Error in edit button click (bubble):', err);
+        }
+        return false;
+    }, false);
+    
+    freshBtn.setAttribute('data-edit-configured', 'true');
+    console.log('Edit button configured and enabled');
+}
+
+// Show Committee Members Form View (Edit)
+window.showCommitteeMembersForm = function() {
+    console.log('showCommitteeMembersForm called');
+    const formView = document.getElementById('committeeMembersFormView');
+    const listView = document.getElementById('committeeMembersListView');
+    const actionsDiv = document.getElementById('committeeCardActions');
+    
+    if (!formView || !listView) {
+        console.error('Form or list view elements not found');
+        return;
+    }
+    
+    // Load saved data into form
+    if (savedCommitteeData.session) {
+        const sessionSelect = document.getElementById('committee_session');
+        if (sessionSelect) sessionSelect.value = savedCommitteeData.session;
+    }
+    if (savedCommitteeData.year) {
+        const yearSelect = document.getElementById('committee_year');
+        if (yearSelect) yearSelect.value = savedCommitteeData.year;
+    }
+    if (savedCommitteeData.term) {
+        const termSelect = document.getElementById('committee_term');
+        if (termSelect) termSelect.value = savedCommitteeData.term;
+    }
+    if (savedCommitteeData.remarks) {
+        const remarksInput = document.getElementById('committee_remarks');
+        if (remarksInput) remarksInput.value = savedCommitteeData.remarks;
+    }
+    
+    // Load saved chief
+    if (savedCommitteeData.chief) {
+        selectedChief = savedCommitteeData.chief;
+        if (!selectedChief.institute) {
+            selectedChief.institute = {{ tenant.institute_label|tojson }};
+        }
+        const chiefSelect = document.getElementById('committee_chief_select');
+        if (chiefSelect) {
+            const chiefOption = Array.from(chiefSelect.options).find(opt => 
+                opt.value == selectedChief.id || 
+                opt.getAttribute('data-name') === selectedChief.name
+            );
+            if (chiefOption) {
+                chiefSelect.value = chiefOption.value;
+            }
+        }
+        const chiefDesignationSelect = document.getElementById('chief_designation');
+        if (chiefDesignationSelect) {
+            chiefDesignationSelect.value = selectedChief.designation || '';
+        }
+        const chiefInstituteInput = document.getElementById('chief_institute');
+        if (chiefInstituteInput) {
+            chiefInstituteInput.value = selectedChief.institute || {{ tenant.institute_label|tojson }};
+        }
+        updateChiefDisplay();
+    } else {
+        selectedChief = null;
+        updateChiefDisplay();
+    }
+    
+    // Load saved members
+    selectedInternalMembers = savedCommitteeData.internal ? savedCommitteeData.internal.map(m => ({
+        id: m.id,
+        name: m.name,
+        designation: m.designation || '',
+        institute: m.institute || ''
+    })) : [];
+    selectedExternalMembers = savedCommitteeData.external ? [...savedCommitteeData.external] : [];
+    updateInternalMembersList();
+    updateExternalMembersList();
+    
+    // Show/Hide views
+    formView.style.display = 'block';
+    listView.style.display = 'none';
+    if (actionsDiv) actionsDiv.style.display = 'none';
+    
+    console.log('Form view shown, list view hidden');
+    
+    // Ensure edit button is still functional (event delegation should handle this, but just in case)
+    console.log('Form displayed, Edit button should still work via event delegation');
+}
+
+// Reset Committee Members (Delete all)
+function resetCommitteeMembers() {
+    if (!confirm('Are you sure you want to reset all committee members? This will delete all saved members.')) {
+        return;
+    }
+    
+    const session = savedCommitteeData.session;
+    const year = savedCommitteeData.year;
+    const term = savedCommitteeData.term;
+    
+    if (!session || !year || !term) {
+        alert('No committee members to reset');
+        return;
+    }
+    
+    fetch('/exam-committee-chief/reset-committee-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            academic_session: session,
+            year: year,
+            term: term
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Committee members reset successfully!');
+            // Clear saved data
+            savedCommitteeData.internal = [];
+            savedCommitteeData.external = [];
+            savedCommitteeData.remarks = null;
+            // Show form view
+            showCommitteeMembersForm();
+            // Clear form
+            selectedInternalMembers = [];
+            selectedExternalMembers = [];
+            updateInternalMembersList();
+            updateExternalMembersList();
+            document.getElementById('committee_session').value = '';
+            document.getElementById('committee_year').value = '';
+            document.getElementById('committee_term').value = '';
+            document.getElementById('committee_remarks').value = '';
+        } else {
+            alert(data.message || 'Failed to reset committee members');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error resetting committee members');
+    });
+}
+
+// Initialize saved committee members data from backend
+const savedCommitteeData = {
+    session: {{ (current_session or "")|tojson }},
+    year: {{ (current_year or "")|tojson }},
+    term: {{ (current_term or "")|tojson }},
+    chief: {% if chief_info %}{{ chief_info|tojson }}{% else %}null{% endif %},
+    internal: {% if saved_committee_members and saved_committee_members.internal %}{{ saved_committee_members.internal|tojson }}{% else %}[]{% endif %},
+    external: {% if saved_committee_members and saved_committee_members.external %}{{ saved_committee_members.external|tojson }}{% else %}[]{% endif %},
+    remarks: {% if saved_committee_members and saved_committee_members.remarks %}{{ saved_committee_members.remarks|tojson }}{% else %}null{% endif %}
+};
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing committee members...');
+    
+    // Show saved members list if data exists
+    const hasChief = savedCommitteeData.chief && savedCommitteeData.chief.name;
+    const hasInternal = savedCommitteeData.internal && Array.isArray(savedCommitteeData.internal) && savedCommitteeData.internal.length > 0;
+    const hasExternal = savedCommitteeData.external && Array.isArray(savedCommitteeData.external) && savedCommitteeData.external.length > 0;
+    
+    if (hasChief || hasInternal || hasExternal) {
+        console.log('Showing committee members list');
+        showCommitteeMembersList();
+    }
+    
+    // Ensure edit button works on page load
+    ensureEditButtonWorks();
+    
+    // Also ensure it works after any DOM updates
+    setTimeout(ensureEditButtonWorks, 200);
+    setTimeout(ensureEditButtonWorks, 500);
+    setTimeout(ensureEditButtonWorks, 1000);
+    
+    // Use MutationObserver to watch for DOM changes and re-attach button
+    const observer = new MutationObserver(function(mutations) {
+        const editBtn = document.getElementById('editCommitteeBtn');
+        if (editBtn && !editBtn.hasAttribute('data-edit-configured')) {
+            ensureEditButtonWorks();
+        }
+    });
+    
+    const committeeCard = document.getElementById('committeeMembersCard');
+    if (committeeCard) {
+        observer.observe(committeeCard, {
+            childList: true,
+            subtree: true,
+            attributes: false
+        });
+    }
+    
+    // Auto-load subjects for evaluator assignment
+    const session = {{ (current_session or "")|tojson }};
+    const year = {{ (current_year or "")|tojson }};
+    const term = {{ (current_term or "")|tojson }};
+    
+    if (session && year && term) {
+        loadSubjectsForEvaluator();
+    }
+});
+
+// Exam Paper Evaluator Assignment Functions
+let isReloading = false;
+let reloadTimeout = null;
+
+function reloadSubjectsTable() {
+    
+    // Clear any pending reload
+    if (reloadTimeout) {
+        clearTimeout(reloadTimeout);
+        reloadTimeout = null;
+    }
+    
+    // Prevent multiple simultaneous reloads
+    if (isReloading) {
+        console.log('Reload already in progress, skipping...');
+        // Debounce: schedule reload after current one completes
+        reloadTimeout = setTimeout(() => {
+            reloadTimeout = null;
+            if (!isReloading) {
+                reloadSubjectsTable();
+            }
+        }, 500);
+        return;
+    }
+    
+    console.log('reloadSubjectsTable called');
+    isReloading = true;
+    
+    const session = {{ (current_session or "")|tojson }};
+    const year = {{ (current_year or "")|tojson }};
+    const term = {{ (current_term or "")|tojson }};
+    
+    if (!session || !year || !term) {
+        console.error('Missing session/year/term');
+        isReloading = false;
+        return;
+    }
+    
+    // Wait a bit for DOM to be ready if elements are not immediately available
+    let loadingDiv = document.getElementById('subjectsLoading');
+    let containerDiv = document.getElementById('subjectsListContainer');
+    let errorDiv = document.getElementById('subjectsError');
+    let tableBody = document.getElementById('subjectsTableBody');
+    
+    // If elements not found, wait a bit and retry once
+    if (!loadingDiv || !containerDiv || !errorDiv || !tableBody) {
+        // Reset flag
+        isReloading = false;
+        console.error('DOM elements not found - table may be rendering');
+        
+        // Retry once after a delay if this was called from an assignment
+        // Only retry if we're not already in a retry loop
+        if (!window._reloadRetryPending) {
+            window._reloadRetryPending = true;
+            setTimeout(() => {
+                window._reloadRetryPending = false;
+                // Check again if elements are available
+                const retryContainer = document.getElementById('subjectsListContainer');
+                const retryTableBody = document.getElementById('subjectsTableBody');
+                if (retryContainer && retryTableBody) {
+                    reloadSubjectsTable();
+                }
+            }, 500);
+        }
+        return;
+    }
+    
+    // Show loading, hide others
+    loadingDiv.style.display = 'block';
+    containerDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+    tableBody.innerHTML = '';
+    
+    const url = `/exam-committee-chief/get-subjects-for-evaluator?academic_session=${encodeURIComponent(session)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&_t=${Date.now()}`;
+    
+    // Add timeout to prevent hanging
+    const fetchPromise = fetch(url, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+    });
+    
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Fetch timeout after 10 seconds')), 10000);
+    });
+    
+    Promise.race([fetchPromise, timeoutPromise])
+        .then(response => {
+            if (!response || !response.ok) {
+                throw new Error(`HTTP error! status: ${response ? response.status : 'no response'}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            isReloading = false;
+            loadingDiv.style.display = 'none';
+            
+            if (data.success && data.subjects && data.subjects.length > 0) {
+                renderSubjectsTable(data.subjects);
+                containerDiv.style.display = 'block';
+                errorDiv.style.display = 'none';
+                console.log('Table reloaded successfully');
+            } else {
+                containerDiv.style.display = 'none';
+                errorDiv.innerHTML = `<i class="fas fa-info-circle me-2"></i>${data.message || 'No subjects found'}`;
+                errorDiv.className = 'alert alert-warning';
+                errorDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            isReloading = false;
+            loadingDiv.style.display = 'none';
+            containerDiv.style.display = 'none';
+            errorDiv.textContent = 'Error: ' + error.message;
+            errorDiv.className = 'alert alert-danger';
+            errorDiv.style.display = 'block';
+            console.error('Error reloading subjects:', error);
+        });
+}
+
+// Alias for backward compatibility
+function loadSubjectsForEvaluator() {
+    reloadSubjectsTable();
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatMergeFlag(value) {
+    if (value === true) return 'Merged';
+    if (value === false) return 'Separate';
+    return 'Unknown';
+}
+
+function formatRemark(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return 'Regular';
+    const lower = raw.toLowerCase();
+    if (lower === 'retake' || lower === 're-retake' || lower === 're retake' || lower === 'reretake') return 'Retake';
+    return raw;
+}
+
+function toIntOrNull(value) {
+    const parsed = parseInt(value, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+}
+
+async function handleSubjectStudentDeregister(buttonEl) {
+    const registrationId = toIntOrNull(buttonEl.getAttribute('data-registration-id'));
+    const studentDbId = toIntOrNull(buttonEl.getAttribute('data-student-db-id'));
+    const studentIdLabel = buttonEl.getAttribute('data-student-id') || 'N/A';
+    const subjectCode = buttonEl.getAttribute('data-subject-code') || 'N/A';
+    const session = buttonEl.getAttribute('data-session') || '';
+    const year = buttonEl.getAttribute('data-year') || '';
+    const term = buttonEl.getAttribute('data-term') || '';
+
+    if (!registrationId || !studentDbId || !session || !year || !term) {
+        alert('Cannot deregister: missing registration metadata.');
+        return;
+    }
+
+    const warningMessage =
+        `WARNING: This will deregister student ${studentIdLabel} from ${subjectCode}.\n\n` +
+        'This action follows the normal deregistration flow and may remove related class/invite data.\n' +
+        'Do you want to continue?';
+    if (!confirm(warningMessage)) {
+        return;
+    }
+
+    const originalText = buttonEl.innerHTML;
+    buttonEl.disabled = true;
+    buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+
+    try {
+        const response = await fetch('/exam-committee-chief/deregister-subject-student', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                registration_id: registrationId,
+                student_id: studentDbId,
+                session: session,
+                year: year,
+                term: term
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Failed to deregister student');
+        }
+
+        alert(data.message || 'Student deregistered successfully.');
+        reloadSubjectsTable();
+    } catch (error) {
+        alert(`Deregistration failed: ${error.message}`);
+        buttonEl.disabled = false;
+        buttonEl.innerHTML = originalText;
+    }
+}
+
+function renderSubjectsTable(subjects) {
+    
+    const tableBody = document.getElementById('subjectsTableBody');
+    if (!tableBody) {
+        console.error('subjectsTableBody element not found');
+        return;
+    }
+    
+    // Clear table first
+    tableBody.innerHTML = '';
+    
+    const teachers = {{ teachers_dict|tojson }};
+    const teacherMap = {};
+    teachers.forEach(t => teacherMap[t.id] = t.name);
+    
+    if (!subjects || subjects.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No subjects found for this session/year/term.</td></tr>';
+        return;
+    }
+    
+    console.log('Rendering table with', subjects.length, 'subjects');
+    
+    // Create teacher options HTML for dropdowns
+    let teacherOptionsHtml = '<option value="">Select Teacher</option>';
+    teachers.forEach(teacher => {
+        teacherOptionsHtml += `<option value="${teacher.id}">${teacher.name}</option>`;
+    });
+    
+    let html = '';
+    subjects.forEach(subject => {
+        const canAssign = subject.is_assignable !== false;
+        const nonAssignableMessage = '<div class="text-muted small">Assignment unavailable: source course mapping not found.</div>';
+        // Part A - Evaluator and Question Setter
+        const partAEvaluator = teacherMap[subject.part_a.assigned_teacher_id] || 'N/A';
+        const partAQuestionSetter = subject.part_a.is_same_person 
+            ? `${teacherMap[subject.part_a.assigned_teacher_id] || 'N/A'} <span class="badge bg-info">Same</span>`
+            : (teacherMap[subject.part_a.question_setter_id] || 'Not assigned');
+        
+        const partACell = subject.part_a.assigned && subject.part_a.assignment_id
+            ? `<div>
+                <div class="mb-2">
+                    <strong>Evaluator:</strong> ${partAEvaluator}
+                </div>
+                <div class="mb-2">
+                    <strong>Question Setter:</strong> ${partAQuestionSetter}
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="unassignEvaluator(${subject.part_a.assignment_id}, ${subject.course_id}, 'A', '${subject.course_code.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-times"></i> Unassign
+                </button>
+               </div>`
+            : !canAssign
+            ? nonAssignableMessage
+            : `<div id="assign-form-${subject.course_id}-A">
+                <div class="mb-2">
+                    <label class="form-label small">Question Setter:</label>
+                    <select class="form-select form-select-sm" style="width: auto; min-width: 200px;" id="question-setter-select-${subject.course_id}-A" onchange="handleQuestionSetterChange(${subject.course_id}, 'A')">
+                        ${teacherOptionsHtml}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small">Evaluator:</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select form-select-sm" style="width: auto; min-width: 200px;" id="teacher-select-${subject.course_id}-A">
+                            ${teacherOptionsHtml}
+                        </select>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="same-person-${subject.course_id}-A" onchange="handleSamePersonCheck(${subject.course_id}, 'A')">
+                            <label class="form-check-label small" for="same-person-${subject.course_id}-A">Same</label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="assignEvaluatorInline(${subject.course_id}, 'A', '${subject.course_code.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-user-plus me-1"></i>Assign
+                </button>
+               </div>`;
+        
+        // Part B - Evaluator and Question Setter
+        const partBEvaluator = teacherMap[subject.part_b.assigned_teacher_id] || 'N/A';
+        const partBQuestionSetter = subject.part_b.is_same_person 
+            ? `${teacherMap[subject.part_b.assigned_teacher_id] || 'N/A'} <span class="badge bg-info">Same</span>`
+            : (teacherMap[subject.part_b.question_setter_id] || 'Not assigned');
+        
+        const partBCell = subject.part_b.assigned && subject.part_b.assignment_id
+            ? `<div>
+                <div class="mb-2">
+                    <strong>Evaluator:</strong> ${partBEvaluator}
+                </div>
+                <div class="mb-2">
+                    <strong>Question Setter:</strong> ${partBQuestionSetter}
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="unassignEvaluator(${subject.part_b.assignment_id}, ${subject.course_id}, 'B', '${subject.course_code.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-times"></i> Unassign
+                </button>
+               </div>`
+            : !canAssign
+            ? nonAssignableMessage
+            : `<div id="assign-form-${subject.course_id}-B">
+                <div class="mb-2">
+                    <label class="form-label small">Question Setter:</label>
+                    <select class="form-select form-select-sm" style="width: auto; min-width: 200px;" id="question-setter-select-${subject.course_id}-B" onchange="handleQuestionSetterChange(${subject.course_id}, 'B')">
+                        ${teacherOptionsHtml}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small">Evaluator:</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select form-select-sm" style="width: auto; min-width: 200px;" id="teacher-select-${subject.course_id}-B">
+                            ${teacherOptionsHtml}
+                        </select>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="same-person-${subject.course_id}-B" onchange="handleSamePersonCheck(${subject.course_id}, 'B')">
+                            <label class="form-check-label small" for="same-person-${subject.course_id}-B">Same</label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="assignEvaluatorInline(${subject.course_id}, 'B', '${subject.course_code.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-user-plus me-1"></i>Assign
+                </button>
+               </div>`;
+        
+        let subjectStudentsDetailHtml = '';
+        const subjectStudentRegs = Array.isArray(subject.subject_student_registrations)
+            ? subject.subject_student_registrations
+            : [];
+        if (subjectStudentRegs.length > 0) {
+            const detailsRowsHtml = subjectStudentRegs.map((row, idx) => {
+                const studentId = escapeHtml(row.student_id || 'N/A');
+                const studentName = escapeHtml(row.student_name || 'N/A');
+                const regSession = escapeHtml(row.academic_session || 'N/A');
+                const regYear = escapeHtml(row.year || 'N/A');
+                const regTerm = escapeHtml(row.term || 'N/A');
+                const remark = escapeHtml(formatRemark(row.remark));
+                const carryOn = row.carry_on ? 'Yes' : 'No';
+                const mergeState = formatMergeFlag(row.use_relevant_for_committee);
+                const registrationId = row.registration_id ?? '';
+                const studentDbId = row.student_db_id ?? '';
+                const canDeregister = registrationId !== '' && studentDbId !== '' && row.academic_session && row.year && row.term;
+                const deregisterAction = canDeregister
+                    ? `<button type="button"
+                                class="btn btn-sm btn-outline-danger deregister-student-btn"
+                                data-registration-id="${registrationId}"
+                                data-student-db-id="${studentDbId}"
+                                data-student-id="${studentId}"
+                                data-subject-code="${escapeHtml(subject.course_code || 'N/A')}"
+                                data-session="${regSession}"
+                                data-year="${regYear}"
+                                data-term="${regTerm}">
+                            <i class="fas fa-user-minus me-1"></i>Deregister
+                       </button>`
+                    : '<span class="text-muted small">N/A</span>';
+                return `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>${studentId}</td>
+                        <td>${studentName}</td>
+                        <td>${remark}</td>
+                        <td>${regSession}</td>
+                        <td>${regYear}</td>
+                        <td>${regTerm}</td>
+                        <td>${carryOn}</td>
+                        <td>${mergeState}</td>
+                        <td>${deregisterAction}</td>
+                    </tr>
+                `;
+            }).join('');
+            subjectStudentsDetailHtml = `
+                <div class="mt-2">
+                    <details>
+                        <summary class="text-primary small">
+                            Students (${subjectStudentRegs.length})
+                        </summary>
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Student ID</th>
+                                        <th>Name</th>
+                                        <th>Remark</th>
+                                        <th>Session</th>
+                                        <th>Year</th>
+                                        <th>Term</th>
+                                        <th>Carry</th>
+                                        <th>Merge</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${detailsRowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            `;
+        }
+
+        let separateRetakeDetailHtml = '';
+        const separateRetakeRegs = Array.isArray(subject.separate_retake_registrations)
+            ? subject.separate_retake_registrations
+            : [];
+        if (subject.is_separate_retake_subject && separateRetakeRegs.length > 0) {
+            separateRetakeDetailHtml = `
+                <div class="mt-1 text-danger small">
+                    Source registrations detected from separate retake flow (${separateRetakeRegs.length}).
+                </div>
+            `;
+        }
+
+        html += `
+            <tr>
+                <td><strong>${subject.course_code}</strong></td>
+                <td>${subject.course_name}${subjectStudentsDetailHtml}${separateRetakeDetailHtml}</td>
+                <td>${partACell}</td>
+                <td>${partBCell}</td>
+            </tr>
+        `;
+    });
+    
+    // Update table
+    tableBody.innerHTML = html;
+    tableBody.querySelectorAll('.deregister-student-btn').forEach(button => {
+        button.addEventListener('click', () => handleSubjectStudentDeregister(button));
+    });
+    applyEvaluatorDefaults(subjects);
+    
+    console.log('Table rendered successfully with', subjects.length, 'subjects');
+    
+    // Force a reflow to ensure the table is visible
+    void tableBody.offsetHeight;
+    
+    // Ensure container is visible
+    const containerDiv = document.getElementById('subjectsListContainer');
+    if (containerDiv) {
+        containerDiv.style.display = 'block';
+    }
+}
+
+function applyEvaluatorDefaults(subjects) {
+    if (!Array.isArray(subjects)) return;
+    subjects.forEach(subject => {
+        ['A', 'B'].forEach(part => {
+            const partData = part === 'A' ? subject.part_a : subject.part_b;
+            if (!partData || partData.assigned) return;
+
+            const qsSelect = document.getElementById(`question-setter-select-${subject.course_id}-${part}`);
+            const evalSelect = document.getElementById(`teacher-select-${subject.course_id}-${part}`);
+            const sameCheckbox = document.getElementById(`same-person-${subject.course_id}-${part}`);
+            if (!qsSelect || !evalSelect || !sameCheckbox) return;
+
+            const defaultQs = partData.default_question_setter_id ? String(partData.default_question_setter_id) : '';
+            const defaultEval = partData.default_assigned_teacher_id ? String(partData.default_assigned_teacher_id) : '';
+
+            // Apply defaults only when fields are empty; user changes remain untouched.
+            if (defaultQs && !qsSelect.value) {
+                qsSelect.value = defaultQs;
+            }
+            if (defaultEval && !evalSelect.value) {
+                evalSelect.value = defaultEval;
+            }
+
+            if (defaultQs && defaultEval && defaultQs === defaultEval && !sameCheckbox.checked) {
+                sameCheckbox.checked = true;
+                evalSelect.value = defaultEval;
+                evalSelect.disabled = true;
+            } else if (!sameCheckbox.checked) {
+                evalSelect.disabled = false;
+            }
+        });
+    });
+}
+
+function handleSamePersonCheck(courseId, part) {
+    const sameCheckbox = document.getElementById(`same-person-${courseId}-${part}`);
+    const evaluatorSelect = document.getElementById(`teacher-select-${courseId}-${part}`);
+    const questionSetterSelect = document.getElementById(`question-setter-select-${courseId}-${part}`);
+    
+    if (sameCheckbox && evaluatorSelect && questionSetterSelect) {
+        if (sameCheckbox.checked) {
+            // Set evaluator to same as question setter
+            evaluatorSelect.value = questionSetterSelect.value;
+            evaluatorSelect.disabled = true;
+        } else {
+            // Enable evaluator selection
+            evaluatorSelect.disabled = false;
+        }
+    }
+}
+
+function handleQuestionSetterChange(courseId, part) {
+    const sameCheckbox = document.getElementById(`same-person-${courseId}-${part}`);
+    const evaluatorSelect = document.getElementById(`teacher-select-${courseId}-${part}`);
+    const questionSetterSelect = document.getElementById(`question-setter-select-${courseId}-${part}`);
+    
+    // If "Same" is checked, update evaluator when question setter changes
+    if (sameCheckbox && sameCheckbox.checked && evaluatorSelect && questionSetterSelect) {
+        evaluatorSelect.value = questionSetterSelect.value;
+    }
+}
+
+function assignEvaluatorInline(courseId, part, courseCode) {
+    
+    const questionSetterSelect = document.getElementById(`question-setter-select-${courseId}-${part}`);
+    if (!questionSetterSelect) {
+        alert('Question setter select not found');
+        return;
+    }
+    
+    const questionSetterId = questionSetterSelect.value;
+    if (!questionSetterId) {
+        alert('Please select a question setter');
+        return;
+    }
+    
+    const teacherSelect = document.getElementById(`teacher-select-${courseId}-${part}`);
+    const sameCheckbox = document.getElementById(`same-person-${courseId}-${part}`);
+    
+    let teacherId = null;
+    let isSamePerson = false;
+    
+    if (sameCheckbox && sameCheckbox.checked) {
+        // Same person is both question setter and evaluator
+        teacherId = questionSetterId;
+        isSamePerson = true;
+    } else if (teacherSelect) {
+        teacherId = teacherSelect.value;
+        if (!teacherId) {
+            alert('Please select an evaluator or check "Same"');
+            return;
+        }
+    }
+    
+    const session = {{ (current_session or "")|tojson }};
+    const year = {{ (current_year or "")|tojson }};
+    const term = {{ (current_term or "")|tojson }};
+    const batch = {{ (current_batch or "")|tojson }};
+    
+    const requestData = {
+        course_id: parseInt(courseId),
+        part: part,
+        assigned_teacher_id: parseInt(teacherId),
+        question_setter_id: questionSetterId ? parseInt(questionSetterId) : null,
+        is_same_person: isSamePerson,
+        academic_session: session,
+        year: year,
+        term: term,
+        batch: batch
+    };
+    
+    // Disable button and show loading
+    const assignBtn = event.target;
+    const originalText = assignBtn.innerHTML;
+    assignBtn.disabled = true;
+    assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Assigning...';
+    if (teacherSelect) teacherSelect.disabled = true;
+    if (questionSetterSelect) questionSetterSelect.disabled = true;
+    
+    fetch('/exam-committee-chief/assign-evaluator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Direct DOM update: Replace the assign form with assigned state
+            const assignForm = document.getElementById(`assign-form-${courseId}-${part}`);
+            if (assignForm) {
+                const teachers = {{ teachers_dict|tojson }};
+                const teacherMap = {};
+                teachers.forEach(t => teacherMap[t.id] = t.name);
+                const evaluatorName = teacherMap[parseInt(teacherId)] || 'N/A';
+                const questionSetterName = isSamePerson 
+                    ? evaluatorName 
+                    : (teacherMap[parseInt(questionSetterId)] || 'N/A');
+                
+                // Update the cell directly
+                assignForm.outerHTML = `
+                    <div>
+                        <div class="mb-2">
+                            <strong>Evaluator:</strong> ${evaluatorName}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Question Setter:</strong> ${isSamePerson ? questionSetterName + ' <span class="badge bg-info">Same</span>' : questionSetterName}
+                        </div>
+                        <button class="btn btn-sm btn-danger" onclick="unassignEvaluator(${data.assignment_id}, ${courseId}, '${part}', '${courseCode.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-times"></i> Unassign
+                        </button>
+                    </div>
+                `;
+            } else {
+                // Fallback: reload table if direct update fails
+                reloadSubjectsTable();
+            }
+        } else {
+            // Reset button state on error
+            assignBtn.disabled = false;
+            assignBtn.innerHTML = originalText;
+            if (teacherSelect) teacherSelect.disabled = false;
+            if (questionSetterSelect) questionSetterSelect.disabled = false;
+            alert(data.message || 'Failed to assign evaluator');
+        }
+    })
+    .catch(error => {
+        console.error('Assignment error:', error);
+        // Reset button state on error
+        assignBtn.disabled = false;
+        assignBtn.innerHTML = originalText;
+        if (teacherSelect) teacherSelect.disabled = false;
+        if (questionSetterSelect) questionSetterSelect.disabled = false;
+        alert('Error: ' + error.message);
+    });
+}
+
+function unassignEvaluator(assignmentId, courseId, part, courseCode) {
+    if (!confirm(`Are you sure you want to unassign the evaluator for ${courseCode} Part ${part}?`)) {
+        return;
+    }
+    
+    // Find the unassign button - it's the button that was clicked
+    // We need to find it by searching for the button with the matching assignmentId
+    const unassignBtn = document.querySelector(`button[onclick*="unassignEvaluator(${assignmentId}"]`);
+    if (!unassignBtn) {
+        alert('Button not found');
+        return;
+    }
+    const originalText = unassignBtn.innerHTML;
+    unassignBtn.disabled = true;
+    unassignBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Unassigning...';
+    
+    fetch('/exam-committee-chief/unassign-evaluator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignment_id: assignmentId })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Direct DOM update: Replace the assigned state with assign form
+            // Find the parent cell (td) that contains the unassign button
+            const cellContainer = unassignBtn.closest('td');
+            if (cellContainer) {
+                const teachers = {{ teachers_dict|tojson }};
+                let teacherOptionsHtml = '<option value="">Select Teacher</option>';
+                teachers.forEach(teacher => {
+                    teacherOptionsHtml += `<option value="${teacher.id}">${teacher.name}</option>`;
+                });
+                
+                // Update the cell directly with Question Setter and Evaluator fields
+                cellContainer.innerHTML = `
+                    <div id="assign-form-${courseId}-${part}">
+                        <div class="mb-2">
+                            <label class="form-label small">Question Setter:</label>
+                            <select class="form-select form-select-sm" style="width: auto; min-width: 200px;" id="question-setter-select-${courseId}-${part}" onchange="handleQuestionSetterChange(${courseId}, '${part}')">
+                                ${teacherOptionsHtml}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Evaluator:</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm" style="width: auto; min-width: 200px;" id="teacher-select-${courseId}-${part}">
+                                    ${teacherOptionsHtml}
+                                </select>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="same-person-${courseId}-${part}" onchange="handleSamePersonCheck(${courseId}, '${part}')">
+                                    <label class="form-check-label small" for="same-person-${courseId}-${part}">Same</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="assignEvaluatorInline(${courseId}, '${part}', '${courseCode.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-user-plus me-1"></i>Assign
+                        </button>
+                    </div>
+                `;
+            } else {
+                // Fallback: reload table if direct update fails
+                reloadSubjectsTable();
+            }
+        } else {
+            // Reset button state on error
+            unassignBtn.disabled = false;
+            unassignBtn.innerHTML = originalText;
+            alert(data.message || 'Failed to unassign evaluator');
+        }
+    })
+    .catch(error => {
+        console.error('Unassignment error:', error);
+        // Reset button state on error
+        unassignBtn.disabled = false;
+        unassignBtn.innerHTML = originalText;
+        alert('Error: ' + error.message);
+    });
+}
+
+// Delete Remuneration Form
+function deleteRemunerationForm(formId, formTitle) {
+    if (!confirm(`Are you sure you want to delete "${formTitle}"?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch(`/exam-committee-chief/custom-remuneration/delete/${formId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Form deleted successfully!');
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to delete form');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting form');
+    });
+}
+</script>
+{% endblock %}
+

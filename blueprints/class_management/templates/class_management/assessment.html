@@ -1,0 +1,1155 @@
+{% extends "base.html" %}
+
+{% block mobile_title %}Assessment{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <style>
+        .assessment-input-field {
+            width: 85px !important;
+            text-align: center;
+        }
+    </style>
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white m-page-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-chart-line me-2"></i>Assessment - {{ session.course_name or session.term }}
+                {% if session.course_code %}
+                    <span class="badge bg-warning text-dark ms-2">{{ session.course_code }}</span>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h6 class="text-muted">Session: {{ session.year }}-{{ session.term }}</h6>
+                <h6 class="text-muted">Course Type: {{ session.course_type|title }} | Category: {{ session.category|upper }}</h6>
+                {% if split_meta %}
+                <div class="alert alert-info py-2 px-3 mt-2 mb-0">
+                    <small>
+                        Split Delivery ({{ split_meta.scope_label }})
+                        {% if split_meta.peers %}
+                            • Partner: {{ split_meta.peers[0].teacher_name }} ({{ split_meta.peers[0].teacher_short }})
+                        {% endif %}
+                        • Each teacher records {{ assessment_slot_count }} assessment(s); overall best {{ academic_rules.assessment.take_best }} calculated automatically.
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if session.is_external_course and session.course_type == 'theory' %}
+            <div class="card mb-3 border-secondary">
+                <div class="card-body py-3">
+                    <label for="externalAssessmentMode" class="form-label mb-1 fw-semibold">
+                        <i class="fas fa-calculator me-1"></i>Assessment Total Calculation
+                    </label>
+                    <select class="form-select form-select-sm" id="externalAssessmentMode" style="max-width: 420px;">
+                        {% for mode_key, mode_label in external_assessment_modes.items() %}
+                        <option value="{{ mode_key }}" {% if external_assessment_mode == mode_key %}selected{% endif %}>{{ mode_label }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted d-block mt-1">External course only — changes apply to this table and PDF/Excel export.</small>
+                    <small class="text-muted d-block">Part A/B mode: enter each assessment out of 15; total = best(A1,A2) + best(A3,A4).</small>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Assessment Reveal Controls -->
+            <div class="card mb-3 border-info assessment-reveal-card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Score Reveal Controls</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Control which assessment scores and attendance marks students can view.</p>
+                    
+                    <div class="row g-3 m-switch-grid">
+                        {% if session.course_type == 'theory' and session.category == 'ug' %}
+                            {% for i in range(1,5) %}
+                                {% if i in editable_indices %}
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input reveal-toggle" type="checkbox" 
+                                               id="reveal_assessment{{i}}" 
+                                               data-assessment="assessment{{i}}"
+                                               {% if reveal_status.get('assessment' ~ i, False) %}checked{% endif %}>
+                                        <label class="form-check-label" for="reveal_assessment{{i}}">
+                                            <strong>Assessment {{i}}</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% elif session.course_type == 'theory' and session.category == 'pg' %}
+                            {% for i in range(1,5) %}
+                                {% if i in editable_indices %}
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input reveal-toggle" type="checkbox" 
+                                               id="reveal_assessment{{i}}" 
+                                               data-assessment="assessment{{i}}"
+                                               {% if reveal_status.get('assessment' ~ i, False) %}checked{% endif %}>
+                                        <label class="form-check-label" for="reveal_assessment{{i}}">
+                                            <strong>Assessment {{i}}</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% elif session.course_type == 'sessional' and session.category == 'ug' %}
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input reveal-toggle" type="checkbox" 
+                                           id="reveal_sessional_report" 
+                                           data-assessment="sessional_report"
+                                           {% if reveal_status.get('sessional_report', False) %}checked{% endif %}>
+                                    <label class="form-check-label" for="reveal_sessional_report">
+                                        <strong>Sessional Report</strong>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input reveal-toggle" type="checkbox" 
+                                           id="reveal_sessional_viva" 
+                                           data-assessment="sessional_viva"
+                                           {% if reveal_status.get('sessional_viva', False) %}checked{% endif %}>
+                                    <label class="form-check-label" for="reveal_sessional_viva">
+                                        <strong>Sessional Viva</strong>
+                                    </label>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="col-12 border-top pt-3 mt-2">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input reveal-toggle" type="checkbox" 
+                                       id="reveal_attendance" 
+                                       data-assessment="attendance"
+                                       {% if reveal_status.get('attendance', False) %}checked{% endif %}>
+                                <label class="form-check-label" for="reveal_attendance">
+                                    <strong>Attendance Marks</strong>
+                                </label>
+                            </div>
+                            {% if session.course_type == 'theory' and session.category == 'pg' and not session.is_external_course %}
+                            {# PG totals are already converted/rounded on the 40 scale #}
+                            {% else %}
+                            <div class="mt-3 mb-2">
+                                <div class="small text-muted mb-1"><strong>Total rounding</strong> (table + PDF/Excel)</div>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="round_assessment_total"
+                                               id="round_total_off" value="0"
+                                               {% if not round_assessment_total %}checked{% endif %}>
+                                        <label class="form-check-label" for="round_total_off">Exact total</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="round_assessment_total"
+                                               id="round_total_on" value="1"
+                                               {% if round_assessment_total %}checked{% endif %}>
+                                        <label class="form-check-label" for="round_total_on">Round to whole number</label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="d-flex gap-2 m-action-row">
+                                <button type="button" class="btn btn-sm btn-success" id="reveal-all-btn">
+                                    <i class="fas fa-eye me-1"></i>Reveal All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary" id="hide-all-btn">
+                                    <i class="fas fa-eye-slash me-1"></i>Hide All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="POST">
+                <div class="table-responsive m-table-scroll-sticky">
+                    <table class="table table-bordered align-middle table-sm assessment-marks-table m-keep-table" style="min-width: 700px; font-size: 0.95em;">
+                        {% if session.is_external_course and session.course_type == 'theory' %}
+                        {% set ext_mark_max = 15 if external_assessment_mode == 'part_a_b_15' else 10 %}
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-bold text-center">Student ID</th>
+                                <th class="fw-bold text-center">Name</th>
+                                {% for i in range(1,5) %}
+                                <th class="fw-bold text-center external-assessment-col-header" id="assessment-col-header-{{ i }}">Assessment {{ i }} ({{ ext_mark_max }})</th>
+                                {% endfor %}
+                                <th class="fw-bold text-center" id="assessment-total-header">{{ external_total_column_label }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td class="text-start">{{ student.student_id }}</td>
+                                <td class="text-start">{{ student.name }}</td>
+                                {% for i in range(1,5) %}
+                                <td class="text-end">
+                                    {% set combined_val_dict = combined_assessment_values.get(student.student_id, {}) %}
+                                    {% set value = combined_val_dict.get(i) if combined_val_dict else None %}
+                                    {% set student_absent = absent_status_map.get(student.id, {}) %}
+                                    {% set is_absent = student_absent.get('assessment' ~ i, False) %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if is_absent %}
+                                        <span class="text-muted fw-bold">Absent</span>
+                                        <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control assessment-input assessment-input-field external-assessment-input" min="0" max="{{ ext_mark_max }}" step="0.01" value="" data-student-id="{{ student.id }}" data-assess-idx="{{i}}" data-editable="1" data-mark-max="{{ ext_mark_max }}" disabled style="display: none;">
+                                        {% else %}
+                                        <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control assessment-input assessment-input-field external-assessment-input" min="0" max="{{ ext_mark_max }}" step="0.01" value="{{ value if value is not none else '' }}" data-student-id="{{ student.id }}" data-assess-idx="{{i}}" data-editable="1" data-mark-max="{{ ext_mark_max }}">
+                                        {% endif %}
+                                        <div class="form-check">
+                                            <input class="form-check-input absent-checkbox external-absent-checkbox" type="checkbox" id="absent_{{i}}_{{student.id}}" name="absent_{{i}}_{{student.id}}" data-student-id="{{student.id}}" data-assess-idx="{{i}}" {% if is_absent %}checked{% endif %}>
+                                            <label class="form-check-label" for="absent_{{i}}_{{student.id}}" style="font-size: 0.9em;">Absent</label>
+                                        </div>
+                                    </div>
+                                </td>
+                                {% endfor %}
+                                <td class="fw-bold text-end">
+                                    {% set ext_total = combined_external_total.get(student.student_id) %}
+                                    <span id="assessment-total-{{ student.id }}" class="external-assessment-total" data-initial-value="{% if ext_total is not none %}{{ ext_total }}{% endif %}">
+                                        {% if ext_total is not none %}
+                                            {% if external_assessment_mode == 'best_three_40' %}
+                                                {{ ext_total|int }}
+                                            {% elif ext_total == ext_total|int %}
+                                                {{ ext_total|int }}
+                                            {% else %}
+                                                {{ "%.2f"|format(ext_total)|replace('.00', '')|replace('.0', '') }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% elif session.course_type == 'theory' and session.category == 'ug' %}
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-bold text-center">Student ID</th>
+                                <th class="fw-bold text-center">Name</th>
+                                {% for i in range(1,5) %}
+                                <th class="fw-bold text-center">Assessment {{ i }} ({{ academic_rules.assessment.slot_max }})</th>
+                                {% endfor %}
+                                <th class="fw-bold text-center">Total of Best {{ academic_rules.assessment.take_best }} ({{ academic_rules.assessment.ug_out_of }})</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td class="text-start">{{ student.student_id }}</td>
+                                <td class="text-start">{{ student.name }}</td>
+                                {% for i in range(1,5) %}
+                                <td class="text-end">
+                                    {% set combined_val_dict = combined_assessment_values.get(student.student_id, {}) %}
+                                    {% set value = combined_val_dict.get(i) if combined_val_dict else None %}
+                                    {% set is_editable = i in editable_indices %}
+                                    {% set student_absent = absent_status_map.get(student.id, {}) %}
+                                    {% set is_absent = student_absent.get('assessment' ~ i, False) %}
+                                    {% if is_editable %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if is_absent %}
+                                        <span class="text-muted fw-bold">Absent</span>
+                                        <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control assessment-input assessment-input-field" min="0" max="{{ academic_rules.assessment.slot_max }}" step="0.01" value="" data-student-id="{{ student.id }}" data-assess-idx="{{i}}" data-editable="1" disabled style="display: none;">
+                                        {% else %}
+                                        <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control assessment-input assessment-input-field" min="0" max="{{ academic_rules.assessment.slot_max }}" step="0.01" value="{{ value if value is not none else '' }}" data-student-id="{{ student.id }}" data-assess-idx="{{i}}" data-editable="1">
+                                        {% endif %}
+                                        <div class="form-check">
+                                            <input class="form-check-input absent-checkbox" type="checkbox" id="absent_{{i}}_{{student.id}}" name="absent_{{i}}_{{student.id}}" data-student-id="{{student.id}}" data-assess-idx="{{i}}" {% if is_absent %}checked{% endif %}>
+                                            <label class="form-check-label" for="absent_{{i}}_{{student.id}}" style="font-size: 0.9em;">Absent</label>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    {# Readonly field - show other teacher's marks (Part A teacher sees Part B's marks, and vice versa) #}
+                                    {# DEBUG: value={{ value }}, student_id={{ student.student_id }}, assessment={{ i }} #}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if value is not none %}
+                                            {% if value == '' or value == 'None' %}
+                                                <span class="text-muted">-</span>
+                                                <input type="hidden" name="assessment{{i}}_{{ student.id }}" value="" data-editable="0" data-assessment-value="">
+                                            {% else %}
+                                                <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control assessment-input assessment-input-field" value="{{ value }}" readonly disabled data-editable="0" data-assessment-value="{{ value }}" data-student-id="{{ student.id }}" style="background-color: #f8f9fa;">
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                            <input type="hidden" name="assessment{{i}}_{{ student.id }}" value="" data-editable="0" data-assessment-value="" data-student-id="{{ student.id }}">
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="fw-bold text-end">
+                                    {% set best_total = combined_best3.get(student.student_id) %}
+                                    <span id="best3total_{{ student.id }}" data-initial-value="{% if best_total is not none %}{{ best_total }}{% endif %}">
+                                        {% if best_total is not none %}
+                                            {% if best_total == best_total|int %}
+                                                {{ best_total|int }}
+                                            {% else %}
+                                                {{ "%.2f"|format(best_total)|replace('.00', '')|replace('.0', '') }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% elif session.course_type == 'sessional' and session.category == 'ug' %}
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-bold text-center">Student ID</th>
+                                <th class="fw-bold text-center">Name</th>
+                                <th class="fw-bold text-center">Sessional Report (60)</th>
+                                <th class="fw-bold text-center">Sessional Viva (30)</th>
+                                <th class="fw-bold text-center">Total (Sessional: 90)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td class="text-start">{{ student.student_id }}</td>
+                                <td class="text-start">{{ student.name }}</td>
+                                <td class="text-end">
+                                    {% set sessional_row = sessional_display_map.get(student.id, {}) %}
+                                    {% set report_absent = sessional_row.get('report_absent', False) %}
+                                    {% set report_value = sessional_row.get('report_value') %}
+                                    {% set report_editable = sessional_row.get('report_editable', True) %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if report_absent %}
+                                        <span class="text-muted fw-bold">Absent</span>
+                                        <input type="number" name="sessional_report_{{ student.id }}" class="form-control sessional-input assessment-input-field" min="0" max="60" step="0.01" value="" data-student-id="{{ student.id }}" disabled style="display: none;">
+                                        {% else %}
+                                        <input type="number" name="sessional_report_{{ student.id }}" class="form-control sessional-input assessment-input-field" min="0" max="60" step="0.01" value="{{ report_value if report_value is not none else '' }}" data-student-id="{{ student.id }}" {% if not report_editable %}readonly disabled style="background-color: #f8f9fa;"{% endif %}>
+                                        {% endif %}
+                                        <div class="form-check">
+                                            <input class="form-check-input sessional-absent-checkbox" type="checkbox" id="sessional_absent_report_{{student.id}}" name="sessional_absent_report_{{student.id}}" data-student-id="{{student.id}}" data-type="report" {% if report_absent %}checked{% endif %} {% if not report_editable %}disabled{% endif %}>
+                                            <label class="form-check-label" for="sessional_absent_report_{{student.id}}" style="font-size: 0.9em;">Absent</label>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    {% set viva_absent = sessional_row.get('viva_absent', False) %}
+                                    {% set viva_value = sessional_row.get('viva_value') %}
+                                    {% set viva_editable = sessional_row.get('viva_editable', True) %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if viva_absent %}
+                                        <span class="text-muted fw-bold">Absent</span>
+                                        <input type="number" name="sessional_viva_{{ student.id }}" class="form-control sessional-input assessment-input-field" min="0" max="30" step="0.01" value="" data-student-id="{{ student.id }}" disabled style="display: none;">
+                                        {% else %}
+                                        <input type="number" name="sessional_viva_{{ student.id }}" class="form-control sessional-input assessment-input-field" min="0" max="30" step="0.01" value="{{ viva_value if viva_value is not none else '' }}" data-student-id="{{ student.id }}" {% if not viva_editable %}readonly disabled style="background-color: #f8f9fa;"{% endif %}>
+                                        {% endif %}
+                                        <div class="form-check">
+                                            <input class="form-check-input sessional-absent-checkbox" type="checkbox" id="sessional_absent_viva_{{student.id}}" name="sessional_absent_viva_{{student.id}}" data-student-id="{{student.id}}" data-type="viva" {% if viva_absent %}checked{% endif %} {% if not viva_editable %}disabled{% endif %}>
+                                            <label class="form-check-label" for="sessional_absent_viva_{{student.id}}" style="font-size: 0.9em;">Absent</label>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="fw-bold text-end">
+                                    <span id="sessional_total_{{ student.id }}">{% if report_value is not none or viva_value is not none %}{{ (report_value or 0) + (viva_value or 0) }}{% else %}<span class="text-muted">Absent</span>{% endif %}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% elif session.course_type == 'theory' and session.category == 'pg' %}
+                        <thead class="table-light">
+                            <tr>
+                                <th class="fw-bold text-center">Student ID</th>
+                                <th class="fw-bold text-center">Name</th>
+                                {% for i in range(1,5) %}
+                                <th class="fw-bold text-center">Assessment {{ i }} ({{ academic_rules.assessment.slot_max }})</th>
+                                {% endfor %}
+                                <th class="fw-bold text-center">Total ({{ academic_rules.assessment.pg_out_of }})</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td class="text-start">{{ student.student_id }}</td>
+                                <td class="text-start">{{ student.name }}</td>
+                                {% for i in range(1,5) %}
+                                <td class="text-end">
+                                    {% set combined_val_dict = combined_assessment_values.get(student.student_id, {}) %}
+                                    {% set value = combined_val_dict.get(i) if combined_val_dict else None %}
+                                    {% set is_editable = i in editable_indices %}
+                                    {% set student_absent = absent_status_map.get(student.id, {}) %}
+                                    {% set is_absent = student_absent.get('assessment' ~ i, False) %}
+                                    {% if is_editable %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if is_absent %}
+                                        <span class="text-muted fw-bold">Absent</span>
+                                        <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control pg-assessment-input assessment-input-field" min="0" max="{{ academic_rules.assessment.slot_max }}" step="0.01" value="" data-student-id="{{ student.id }}" data-assess-idx="{{i}}" data-editable="1" disabled style="display: none;">
+                                        {% else %}
+                                        <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control pg-assessment-input assessment-input-field" min="0" max="{{ academic_rules.assessment.slot_max }}" step="0.01" value="{{ value if value is not none else '' }}" data-student-id="{{ student.id }}" data-assess-idx="{{i}}" data-editable="1">
+                                        {% endif %}
+                                        <div class="form-check">
+                                            <input class="form-check-input pg-absent-checkbox" type="checkbox" id="pg_absent_{{i}}_{{student.id}}" name="absent_{{i}}_{{student.id}}" data-student-id="{{student.id}}" data-assess-idx="{{i}}" {% if is_absent %}checked{% endif %}>
+                                            <label class="form-check-label" for="pg_absent_{{i}}_{{student.id}}" style="font-size: 0.9em;">Absent</label>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if value is not none %}
+                                            <input type="number" name="assessment{{i}}_{{ student.id }}" class="form-control pg-assessment-input assessment-input-field" value="{{ value }}" readonly disabled data-editable="0" data-assessment-value="{{ value }}" data-student-id="{{ student.id }}" style="background-color: #f8f9fa;">
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                            <input type="hidden" name="assessment{{i}}_{{ student.id }}" value="" data-editable="0" data-assessment-value="" data-student-id="{{ student.id }}">
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="fw-bold text-end">
+                                    {% set pg_total = combined_pg_total.get(student.student_id) %}
+                                    <span id="pg_total_{{ student.id }}">{% if pg_total is not none %}{{ pg_total|int }}{% else %}<span class="text-muted">-</span>{% endif %}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% else %}
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="text-center text-danger">
+                                    <p>This course type is not supported for assessment.</p>
+                                    <p>Supported types: UG Theory, PG Theory, UG Sessional</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                        {% endif %}
+                    </table>
+                </div>
+                
+                {% if students and ((session.is_external_course and session.course_type == 'theory') or (session.course_type == 'theory' and session.category == 'ug') or (session.course_type == 'theory' and session.category == 'pg') or (session.course_type == 'sessional' and session.category == 'ug')) %}
+                    <div class="d-flex gap-2 mt-3 flex-wrap align-items-center">
+                        <div id="auto-save-status" class="me-2" style="display: none;">
+                            <small class="text-muted">
+                                <i class="fas fa-spinner fa-spin" id="save-spinner" style="display: none;"></i>
+                                <span id="save-message"></span>
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save Assessment
+                        </button>
+                        <a href="{{ url_for('class_management.download_assessment_excel', session_id=session.id) }}" class="btn btn-success">
+                            <i class="fas fa-download me-1"></i>Download Excel
+                        </a>
+                        <a href="{{ url_for('class_management.download_assessment_pdf', session_id=session.id) }}" class="btn btn-danger" target="_blank">
+                            <i class="fas fa-file-pdf me-1"></i>Assessment PDF
+                        </a>
+                        <a href="{{ url_for('class_management.download_pdf_report', session_id=session.id) }}" class="btn btn-dark" target="_blank">
+                            <i class="fas fa-file-pdf me-1"></i>Download PDF
+                        </a>
+                        <a href="{{ url_for('class_management.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                        </a>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+window.ROUND_ASSESSMENT_TOTAL = {{ 'true' if round_assessment_total else 'false' }};
+window.roundHalfUpInt = function (value) {
+    if (value === null || value === undefined || isNaN(value)) return null;
+    return Math.floor(Number(value) + 0.5);
+};
+window.formatAssessmentTotalDisplay = function (value) {
+    if (value === null || value === undefined || isNaN(value)) {
+        return '<span class="text-muted">-</span>';
+    }
+    if (window.ROUND_ASSESSMENT_TOTAL) {
+        return String(window.roundHalfUpInt(value));
+    }
+    const text = Number(value).toFixed(2).replace(/\.?0+$/, '');
+    return text;
+};
+window.applyOptionalTotalRounding = function (value) {
+    if (value === null || value === undefined || isNaN(value)) return value;
+    return window.ROUND_ASSESSMENT_TOTAL ? window.roundHalfUpInt(value) : value;
+};
+window.ACADEMIC_ASSESSMENT = {{ academic_rules.assessment|tojson }};
+window.takeBestMarks = function(vals) {
+    const n = Number((window.ACADEMIC_ASSESSMENT || {}).take_best) || 3;
+    return [...vals].sort(function(a, b) { return b - a; }).slice(0, n);
+};
+window.scalePgTotal = function(bestSum) {
+    const cfg = window.ACADEMIC_ASSESSMENT || {};
+    const from = Number(cfg.pg_scale_from) || 30;
+    const out = Number(cfg.pg_out_of) || 40;
+    return Math.round((bestSum / from) * out);
+};
+</script>
+{% if session.is_external_course and session.course_type == 'theory' %}
+<script>
+const EXTERNAL_ASSESSMENT_COLUMN_LABELS = {{ {
+    'best_three': 'Total of Best ' ~ academic_rules.assessment.take_best ~ ' (' ~ academic_rules.assessment.ug_out_of ~ ')',
+    'part_a_b_15': 'Part A (' ~ academic_rules.assessment.part_a_b_each ~ ') + Part B (' ~ academic_rules.assessment.part_a_b_each ~ ') (' ~ academic_rules.assessment.ug_out_of ~ ')',
+    'best_three_40': 'Total (' ~ academic_rules.assessment.pg_out_of ~ ')'
+}|tojson }};
+const EXTERNAL_ASSESSMENT_MARK_MAX = {{ {
+    'best_three': academic_rules.assessment.slot_max,
+    'part_a_b_15': academic_rules.assessment.part_a_b_each,
+    'best_three_40': academic_rules.assessment.slot_max
+}|tojson }};
+const SET_EXTERNAL_MODE_URL = {{ url_for('class_management.set_external_assessment_mode', session_id=session.id)|tojson }};
+
+function getExternalAssessmentMarks(studentId) {
+    const marks = {1: null, 2: null, 3: null, 4: null};
+    for (let i = 1; i <= 4; i++) {
+        const absentBox = document.querySelector(`#absent_${i}_${studentId}`);
+        if (absentBox && absentBox.checked) continue;
+        const input = document.querySelector(`input[name="assessment${i}_${studentId}"]`);
+        if (!input) continue;
+        let inputValue = input.getAttribute('data-assessment-value');
+        if (!inputValue || inputValue === '') {
+            inputValue = input.value || '';
+        }
+        if (!inputValue) continue;
+        const v = parseFloat(inputValue);
+        if (!isNaN(v) && v >= 0) {
+            marks[i] = v;
+        }
+    }
+    return marks;
+}
+
+function computeExternalTotal(marks, mode) {
+    if (mode === 'part_a_b_15') {
+        const partA = [marks[1], marks[2]].filter(v => v !== null);
+        const partB = [marks[3], marks[4]].filter(v => v !== null);
+        if (!partA.length && !partB.length) return null;
+        const partAScore = partA.length ? Math.max(...partA) : 0;
+        const partBScore = partB.length ? Math.max(...partB) : 0;
+        return partAScore + partBScore;
+    }
+    const vals = Object.values(marks).filter(v => v !== null);
+    if (!vals.length) return null;
+    vals.sort((a, b) => b - a);
+    const best = window.takeBestMarks(vals);
+    const bestSum = best.reduce((a, b) => a + b, 0);
+    if (mode === 'best_three_40') {
+        return window.scalePgTotal(bestSum);
+    }
+    return bestSum;
+}
+
+function formatExternalTotal(value, mode) {
+    if (value === null || value === undefined || isNaN(value)) {
+        return '<span class="text-muted">-</span>';
+    }
+    if (mode === 'best_three_40') {
+        return String(Math.round(value));
+    }
+    return window.formatAssessmentTotalDisplay(value);
+}
+
+function calcExternalTotal(studentId, mode) {
+    const cell = document.getElementById('assessment-total-' + studentId);
+    if (!cell) return;
+    const total = computeExternalTotal(getExternalAssessmentMarks(studentId), mode);
+    cell.innerHTML = formatExternalTotal(total, mode);
+}
+
+function recalcAllExternalTotals(mode) {
+    document.querySelectorAll('.external-assessment-total').forEach(cell => {
+        const studentId = cell.id.replace('assessment-total-', '');
+        calcExternalTotal(studentId, mode);
+    });
+}
+
+function updateExternalHeader(mode) {
+    const header = document.getElementById('assessment-total-header');
+    if (header) {
+        header.textContent = EXTERNAL_ASSESSMENT_COLUMN_LABELS[mode] || EXTERNAL_ASSESSMENT_COLUMN_LABELS.best_three;
+    }
+}
+
+function updateExternalColumnHeaders(mode) {
+    const markMax = EXTERNAL_ASSESSMENT_MARK_MAX[mode] || 10;
+    for (let i = 1; i <= 4; i++) {
+        const colHeader = document.getElementById('assessment-col-header-' + i);
+        if (colHeader) {
+            colHeader.textContent = `Assessment ${i} (${markMax})`;
+        }
+    }
+    document.querySelectorAll('.external-assessment-input').forEach(input => {
+        input.max = markMax;
+        input.dataset.markMax = markMax;
+    });
+}
+
+function applyExternalModeUi(mode) {
+    updateExternalHeader(mode);
+    updateExternalColumnHeaders(mode);
+    recalcAllExternalTotals(mode);
+}
+
+document.querySelectorAll('.external-assessment-input').forEach(input => {
+    if (input.dataset.editable !== '1') return;
+    input.addEventListener('input', function() {
+        const modeSelect = document.getElementById('externalAssessmentMode');
+        calcExternalTotal(this.dataset.studentId, modeSelect ? modeSelect.value : 'best_three');
+    });
+});
+
+document.querySelectorAll('.external-absent-checkbox').forEach(chk => {
+    chk.addEventListener('change', function() {
+        const studentId = this.dataset.studentId;
+        const idx = this.dataset.assessIdx;
+        const input = document.querySelector(`[name=assessment${idx}_${studentId}]`);
+        const td = this.closest('td');
+        if (this.checked) {
+            if (input) {
+                input.value = '';
+                input.disabled = true;
+                input.style.display = 'none';
+            }
+            let absentSpan = td.querySelector('.absent-text');
+            if (!absentSpan) {
+                absentSpan = document.createElement('span');
+                absentSpan.className = 'text-muted fw-bold absent-text';
+                absentSpan.textContent = 'Absent';
+                td.querySelector('.d-flex').insertBefore(absentSpan, td.querySelector('.form-check'));
+            }
+        } else {
+            if (input) {
+                input.disabled = false;
+                input.style.display = '';
+            }
+            const absentSpan = td.querySelector('.absent-text');
+            if (absentSpan) absentSpan.remove();
+        }
+        const modeSelect = document.getElementById('externalAssessmentMode');
+        calcExternalTotal(studentId, modeSelect ? modeSelect.value : 'best_three');
+    });
+});
+
+const externalModeSelect = document.getElementById('externalAssessmentMode');
+if (externalModeSelect) {
+    externalModeSelect.addEventListener('change', function() {
+        const mode = this.value;
+        applyExternalModeUi(mode);
+        fetch(SET_EXTERNAL_MODE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ mode: mode })
+        }).then(response => response.json()).then(data => {
+            if (!data.success) {
+                alert(data.message || 'Failed to save assessment calculation mode.');
+                return;
+            }
+            if (data.column_label) {
+                updateExternalHeader(data.mode || mode);
+            }
+            if (data.totals) {
+                Object.keys(data.totals).forEach(studentRowId => {
+                    const cell = document.getElementById('assessment-total-' + studentRowId);
+                    if (cell) {
+                        cell.innerHTML = formatExternalTotal(data.totals[studentRowId], data.mode || mode);
+                    }
+                });
+            }
+        }).catch(() => {
+            alert('Failed to save assessment calculation mode.');
+        });
+    });
+}
+
+(function() {
+    function runExternalInitialCalc() {
+        const modeSelect = document.getElementById('externalAssessmentMode');
+        const mode = modeSelect ? modeSelect.value : 'best_three';
+        applyExternalModeUi(mode);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runExternalInitialCalc);
+    } else {
+        setTimeout(runExternalInitialCalc, 100);
+    }
+})();
+</script>
+{% elif session.course_type == 'theory' and session.category == 'ug' %}
+<script>
+function calcBest3Total(studentId) {
+    let vals = [];
+    for (let i = 1; i <= 4; i++) {
+        const absentBox = document.querySelector(`#absent_${i}_${studentId}`);
+        const absent = absentBox ? absentBox.checked : false;
+        if (absent) continue; // Skip if marked absent
+        
+        // Get input field (both editable and readonly) - use more specific selector
+        const input = document.querySelector(`input[name="assessment${i}_${studentId}"]`);
+        if (!input) continue;
+        
+        // Check if input is disabled but has a value (readonly from other teacher)
+        // Try to get value from data-assessment-value attribute first (more reliable for disabled inputs)
+        let inputValue = input.getAttribute('data-assessment-value');
+        // If data attribute is empty, try input.value
+        if (!inputValue || inputValue === '') {
+            inputValue = input.value || '';
+        }
+        // If still empty, skip this assessment
+        if (!inputValue || inputValue === '') continue;
+        
+        const v = parseFloat(inputValue);
+        if (!isNaN(v) && v >= 0) {
+            vals.push(v);
+        }
+    }
+    let cell = document.getElementById('best3total_' + studentId);
+    if (!cell) return;
+    if (vals.length === 0) {
+        cell.innerHTML = '<span class="text-muted">-</span>';
+    } else {
+        const best = window.takeBestMarks(vals);
+        const sum = window.applyOptionalTotalRounding(best.reduce((a,b) => a+b, 0));
+        cell.innerHTML = window.formatAssessmentTotalDisplay(sum);
+    }
+}
+
+document.querySelectorAll('.assessment-input').forEach(input => {
+    if (input.dataset.editable !== '1') return;
+    input.addEventListener('input', function() {
+        calcBest3Total(this.dataset.studentId);
+    });
+});
+
+document.querySelectorAll('.absent-checkbox').forEach(chk => {
+    chk.addEventListener('change', function() {
+        const studentId = this.dataset.studentId;
+        const idx = this.dataset.assessIdx;
+        const input = document.querySelector(`[name=assessment${idx}_${studentId}]`);
+        const td = this.closest('td');
+        
+        if (this.checked) {
+            // Hide input and show "Absent" text
+            if (input) {
+                input.value = '';
+                input.disabled = true;
+                input.style.display = 'none';
+            }
+            // Check if "Absent" span already exists
+            let absentSpan = td.querySelector('.absent-text');
+            if (!absentSpan) {
+                absentSpan = document.createElement('span');
+                absentSpan.className = 'text-muted fw-bold absent-text';
+                absentSpan.textContent = 'Absent';
+                td.querySelector('.d-flex').insertBefore(absentSpan, td.querySelector('.form-check'));
+            }
+        } else {
+            // Show input and hide "Absent" text
+            if (input) {
+                input.disabled = false;
+                input.style.display = '';
+            }
+            const absentSpan = td.querySelector('.absent-text');
+            if (absentSpan) {
+                absentSpan.remove();
+            }
+        }
+        calcBest3Total(studentId);
+    });
+});
+
+// Initial calculation - calculate for all students (including readonly inputs from split courses)
+// Run after page load to ensure all inputs are available
+(function() {
+    function runInitialCalc() {
+        // Get all student IDs from the table rows
+        document.querySelectorAll('tbody tr').forEach(row => {
+            const firstInput = row.querySelector('input[name^="assessment"]');
+            if (!firstInput) return;
+            
+            // Extract student ID from first input's name attribute
+            const nameMatch = firstInput.name.match(/assessment\d+_(\d+)/);
+            if (!nameMatch) return;
+            
+            const studentId = nameMatch[1];
+            
+            // Calculate Best 3 total
+            if (document.getElementById('best3total_' + studentId)) {
+                calcBest3Total(studentId);
+            }
+            
+            // Calculate PG total
+            if (document.getElementById('pg_total_' + studentId)) {
+                calcPGTotal(studentId);
+            }
+        });
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runInitialCalc);
+    } else {
+        // DOM already loaded
+        setTimeout(runInitialCalc, 200);
+    }
+})();
+</script>
+{% elif session.course_type == 'sessional' and session.category == 'ug' %}
+<script>
+function calcSessionalTotal(studentId) {
+    const reportAbsent = document.querySelector(`#sessional_absent_report_${studentId}`).checked;
+    const vivaAbsent = document.querySelector(`#sessional_absent_viva_${studentId}`).checked;
+    const reportInput = document.querySelector(`[name=sessional_report_${studentId}]`);
+    const vivaInput = document.querySelector(`[name=sessional_viva_${studentId}]`);
+    
+    let report = reportAbsent ? 0 : (reportInput.value ? parseFloat(reportInput.value) : 0);
+    let viva = vivaAbsent ? 0 : (vivaInput.value ? parseFloat(vivaInput.value) : 0);
+    
+    const total = window.applyOptionalTotalRounding(report + viva);
+    const cell = document.getElementById('sessional_total_' + studentId);
+    
+    if (reportAbsent && vivaAbsent) {
+        cell.innerHTML = '<span class="text-muted">Absent</span>';
+    } else {
+        cell.innerHTML = window.formatAssessmentTotalDisplay(total);
+    }
+}
+
+document.querySelectorAll('.sessional-input').forEach(input => {
+    input.addEventListener('input', function() {
+        calcSessionalTotal(this.dataset.studentId);
+    });
+});
+
+document.querySelectorAll('.sessional-absent-checkbox').forEach(chk => {
+    chk.addEventListener('change', function() {
+        const studentId = this.dataset.studentId;
+        const type = this.dataset.type;
+        const input = document.querySelector(`[name=sessional_${type}_${studentId}]`);
+        const td = this.closest('td');
+        
+        if (this.checked) {
+            // Hide input and show "Absent" text
+            if (input) {
+                input.value = '';
+                input.disabled = true;
+                input.style.display = 'none';
+            }
+            // Check if "Absent" span already exists
+            let absentSpan = td.querySelector('.absent-text');
+            if (!absentSpan) {
+                absentSpan = document.createElement('span');
+                absentSpan.className = 'text-muted fw-bold absent-text';
+                absentSpan.textContent = 'Absent';
+                td.querySelector('.d-flex').insertBefore(absentSpan, td.querySelector('.form-check'));
+            }
+        } else {
+            // Show input and hide "Absent" text
+            if (input) {
+                input.disabled = false;
+                input.style.display = '';
+            }
+            const absentSpan = td.querySelector('.absent-text');
+            if (absentSpan) {
+                absentSpan.remove();
+            }
+        }
+        calcSessionalTotal(studentId);
+    });
+});
+
+// Initial calculation
+document.querySelectorAll('.sessional-input').forEach(input => {
+    calcSessionalTotal(input.dataset.studentId);
+});
+</script>
+{% elif session.course_type == 'theory' and session.category == 'pg' %}
+<script>
+function calcPGTotal(studentId) {
+    let vals = [];
+    for (let i = 1; i <= 4; i++) {
+        const absentBox = document.querySelector(`#pg_absent_${i}_${studentId}`);
+        const absent = absentBox ? absentBox.checked : false;
+        if (absent) continue; // Skip if marked absent
+        
+        // Get input field (both editable and readonly) - use more specific selector
+        const input = document.querySelector(`input[name="assessment${i}_${studentId}"]`);
+        if (!input) continue;
+        
+        // Check if input is disabled but has a value (readonly from other teacher)
+        // Try to get value from data-assessment-value attribute first (more reliable for disabled inputs)
+        let inputValue = input.getAttribute('data-assessment-value');
+        // If data attribute is empty, try input.value
+        if (!inputValue || inputValue === '') {
+            inputValue = input.value || '';
+        }
+        // If still empty, skip this assessment
+        if (!inputValue || inputValue === '') continue;
+        
+        const v = parseFloat(inputValue);
+        if (!isNaN(v) && v >= 0) {
+            vals.push(v);
+        }
+    }
+    
+    const totalCell = document.getElementById('pg_total_' + studentId);
+    if (!totalCell) return;
+    
+    if (vals.length === 0) {
+        totalCell.innerHTML = '<span class="text-muted">-</span>';
+    } else {
+        const best = window.takeBestMarks(vals);
+        const bestSum = best.reduce((a,b) => a+b, 0);
+        const total = window.scalePgTotal(bestSum);
+        totalCell.textContent = total;
+    }
+}
+
+document.querySelectorAll('.pg-assessment-input').forEach(input => {
+    if (input.dataset.editable !== '1') return;
+    input.addEventListener('input', function() {
+        calcPGTotal(this.dataset.studentId);
+    });
+});
+
+document.querySelectorAll('.pg-absent-checkbox').forEach(chk => {
+    chk.addEventListener('change', function() {
+        const studentId = this.dataset.studentId;
+        const idx = this.dataset.assessIdx;
+        const input = document.querySelector(`[name=assessment${idx}_${studentId}]`);
+        const td = this.closest('td');
+        
+        if (this.checked) {
+            // Hide input and show "Absent" text
+            if (input) {
+                input.value = '';
+                input.disabled = true;
+                input.style.display = 'none';
+            }
+            // Check if "Absent" span already exists
+            let absentSpan = td.querySelector('.absent-text');
+            if (!absentSpan) {
+                absentSpan = document.createElement('span');
+                absentSpan.className = 'text-muted fw-bold absent-text';
+                absentSpan.textContent = 'Absent';
+                td.querySelector('.d-flex').insertBefore(absentSpan, td.querySelector('.form-check'));
+            }
+        } else {
+            // Show input and hide "Absent" text
+            if (input) {
+                input.disabled = false;
+                input.style.display = '';
+            }
+            const absentSpan = td.querySelector('.absent-text');
+            if (absentSpan) {
+                absentSpan.remove();
+            }
+        }
+        calcPGTotal(studentId);
+    });
+});
+
+// PG calculation is handled in the unified initial calculation function above
+</script>
+{% endif %}
+
+<!-- Auto-save functionality for all course types -->
+<script>
+(function() {
+    const sessionId = {{ session.id }};
+    let saveTimeout = null;
+    const saveStatusEl = document.getElementById('auto-save-status');
+    const saveSpinner = document.getElementById('save-spinner');
+    const saveMessage = document.getElementById('save-message');
+    
+    function showSaveStatus(message, isSaving = false) {
+        if (!saveStatusEl) return;
+        saveStatusEl.style.display = 'block';
+        if (saveSpinner) saveSpinner.style.display = isSaving ? 'inline-block' : 'none';
+        if (saveMessage) {
+            saveMessage.textContent = message;
+            saveMessage.className = isSaving ? 'text-info' : (message.includes('saved') ? 'text-success' : 'text-danger');
+        }
+        if (!isSaving && message.includes('saved')) {
+            setTimeout(() => {
+                if (saveStatusEl) saveStatusEl.style.display = 'none';
+            }, 2000);
+        }
+    }
+    
+    function autoSave() {
+        const form = document.querySelector('form[method="POST"]');
+        if (!form) return;
+        
+        const formData = new FormData(form);
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+        
+        showSaveStatus('Saving...', true);
+        
+        fetch(`/class-management/assessment/${sessionId}/auto-save`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showSaveStatus('✓ Saved automatically', false);
+            } else {
+                showSaveStatus('✗ Save failed', false);
+            }
+        })
+        .catch(error => {
+            console.error('Auto-save error:', error);
+            showSaveStatus('✗ Save failed', false);
+        });
+    }
+    
+    function debounceAutoSave() {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(autoSave, 1500); // Wait 1.5 seconds after user stops typing
+    }
+    
+    // Add auto-save to all assessment inputs
+    document.querySelectorAll('.assessment-input, .sessional-input, .pg-assessment-input').forEach(input => {
+        if (input.dataset.editable !== '0' && !input.disabled) {
+            input.addEventListener('input', debounceAutoSave);
+        }
+    });
+    
+    // Add auto-save to absent checkboxes
+    document.querySelectorAll('.absent-checkbox, .sessional-absent-checkbox, .pg-absent-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', debounceAutoSave);
+    });
+})();
+</script>
+<!-- Assessment Reveal Controls JavaScript -->
+<script>
+(function() {
+    const sessionId = {{ session.id }};
+    const currentTeacherId = {{ current_teacher_id }};
+    
+    // Toggle reveal status for individual assessment
+    document.querySelectorAll('.reveal-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const assessmentType = this.dataset.assessment;
+            const isRevealed = this.checked;
+            
+            toggleRevealStatus(assessmentType, isRevealed);
+        });
+    });
+    
+    // Reveal all button
+    document.getElementById('reveal-all-btn')?.addEventListener('click', function() {
+        document.querySelectorAll('.reveal-toggle').forEach(toggle => {
+            toggle.checked = true;
+            const assessmentType = toggle.dataset.assessment;
+            toggleRevealStatus(assessmentType, true);
+        });
+    });
+    
+    // Hide all button
+    document.getElementById('hide-all-btn')?.addEventListener('click', function() {
+        document.querySelectorAll('.reveal-toggle').forEach(toggle => {
+            toggle.checked = false;
+            const assessmentType = toggle.dataset.assessment;
+            toggleRevealStatus(assessmentType, false);
+        });
+    });
+    
+    function toggleRevealStatus(assessmentType, isRevealed) {
+        fetch(`/class-management/assessment/${sessionId}/toggle-reveal`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                assessment_type: assessmentType,
+                revealed: isRevealed,
+                teacher_id: currentTeacherId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(`Assessment ${assessmentType} ${isRevealed ? 'revealed' : 'hidden'} successfully`);
+            } else {
+                console.error('Error toggling reveal status:', data.message);
+                alert('Error updating reveal status. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating reveal status. Please try again.');
+        });
+    }
+
+    function recalcVisibleTotalsFromPage() {
+        if (typeof recalcAllExternalTotals === 'function') {
+            const modeSelect = document.getElementById('externalAssessmentMode');
+            recalcAllExternalTotals(modeSelect ? modeSelect.value : 'best_three');
+            return;
+        }
+        document.querySelectorAll('[id^="best3total_"]').forEach(cell => {
+            const studentId = cell.id.replace('best3total_', '');
+            if (typeof calcBest3Total === 'function') calcBest3Total(studentId);
+        });
+        document.querySelectorAll('[id^="sessional_total_"]').forEach(cell => {
+            const studentId = cell.id.replace('sessional_total_', '');
+            if (typeof calcSessionalTotal === 'function') calcSessionalTotal(studentId);
+        });
+    }
+
+    function applyServerTotals(totals) {
+        if (!totals) return;
+        Object.keys(totals).forEach(studentId => {
+            const value = totals[studentId];
+            const targets = [
+                document.getElementById('best3total_' + studentId),
+                document.getElementById('assessment-total-' + studentId),
+                document.getElementById('sessional_total_' + studentId),
+            ].filter(Boolean);
+            targets.forEach(cell => {
+                if (value === null || value === undefined) {
+                    cell.innerHTML = '<span class="text-muted">-</span>';
+                } else {
+                    cell.innerHTML = window.formatAssessmentTotalDisplay(Number(value));
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll('input[name="round_assessment_total"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            if (!this.checked) return;
+            const enabled = this.value === '1';
+            window.ROUND_ASSESSMENT_TOTAL = enabled;
+            fetch(`/class-management/assessment/${sessionId}/toggle-round-total`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: enabled })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || 'Could not update round-total setting.');
+                    return;
+                }
+                if (data.totals) {
+                    applyServerTotals(data.totals);
+                } else {
+                    recalcVisibleTotalsFromPage();
+                }
+            })
+            .catch(() => alert('Could not update round-total setting. Please try again.'));
+        });
+    });
+})();
+</script>
+
+{% endblock %}
+
+ 
+
+ 

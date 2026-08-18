@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block mobile_title %}Exam Eval{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0"><i class="fas fa-edit me-2 text-warning"></i>Edit Subject Entry</h3>
+        <div>
+            <a href="{{ url_for('exam_evaluation') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Course Name</label>
+                    <input type="text" name="course_name" class="form-control" value="{{ entry.course_name }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Course Code</label>
+                    <input type="text" name="course_code" id="course_code" class="form-control" value="{{ entry.course_code }}" required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Batch</label>
+                        <input type="text" name="batch" class="form-control" value="{{ entry.batch }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Academic Session</label>
+                        <input type="text" name="academic_session" class="form-control" value="{{ entry.academic_session }}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Discipline</label>
+                    <input type="text" name="discipline" class="form-control" value="{{ entry.discipline }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">School</label>
+                    <input type="text" name="school" class="form-control" value="{{ entry.school }}">
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Year</label>
+                        <input type="text" name="year" class="form-control" value="{{ entry.year }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Term</label>
+                        <input type="text" name="term" class="form-control" value="{{ entry.term }}">
+                    </div>
+                </div>
+                <div class="mb-3 mt-3">
+                    <label class="form-label">Section</label>
+                    <input type="text" name="section" class="form-control" value="{{ entry.section }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label d-block">Program Level</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="program_level" id="levelUG" value="ug" {% if entry.program_level == 'ug' %}checked{% endif %}>
+                        <label class="form-check-label" for="levelUG">Undergraduate</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="program_level" id="levelPG" value="pg" {% if entry.program_level == 'pg' %}checked{% endif %}>
+                        <label class="form-check-label" for="levelPG">Postgraduate</label>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('exam_evaluation') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Update Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-select postgraduate if last 4 digits' first digit is "5"
+function checkAndSetProgramLevel(courseCode) {
+    if (!courseCode) return;
+    
+    const levelPG = document.getElementById('levelPG');
+    const levelUG = document.getElementById('levelUG');
+    if (!levelPG || !levelUG) return;
+    
+    // Pattern: শেষ চার ডিজিটের প্রথমটা "5" দিয়ে শুরু হলে postgraduate
+    // Examples: "0421 28 Law 5101" → শেষ 4 ডিজিট: "5101" → Postgraduate
+    //           "0421 28 Law 1101" → শেষ 4 ডিজিট: "1101" → Undergraduate
+    const code = courseCode.trim();
+    
+    // Extract last 4 digits from the course code
+    // Remove all non-digit characters and get last 4 digits
+    const digitsOnly = code.replace(/\D/g, ''); // Remove all non-digits
+    
+    if (digitsOnly.length >= 4) {
+        const lastFourDigits = digitsOnly.slice(-4); // Get last 4 digits
+        const firstDigit = lastFourDigits.charAt(0);
+        
+        if (firstDigit === '5') {
+            levelPG.checked = true;
+            console.log(`Auto-selected Postgraduate for course code: ${courseCode} (last 4 digits: ${lastFourDigits}, first digit: ${firstDigit})`);
+            return;
+        }
+    }
+    
+    // If pattern doesn't match, keep default (UG) or don't change
+}
+
+// Apply on page load if course code matches pattern
+document.addEventListener('DOMContentLoaded', function() {
+    const courseCodeInput = document.getElementById('course_code');
+    if (courseCodeInput && courseCodeInput.value) {
+        checkAndSetProgramLevel(courseCodeInput.value);
+    }
+    
+    // Also listen to manual course code input changes
+    if (courseCodeInput) {
+        courseCodeInput.addEventListener('input', function() {
+            checkAndSetProgramLevel(this.value);
+        });
+    }
+});
+</script>
+{% endblock %}

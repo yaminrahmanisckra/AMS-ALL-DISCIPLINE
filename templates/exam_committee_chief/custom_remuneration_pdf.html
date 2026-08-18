@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <title>Statement of Remuneration</title>
+    <style>
+        @font-face {
+            font-family: 'PDFSerif';
+            src: url('{{ pdf_font_regular }}');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'PDFSerif';
+            src: url('{{ pdf_font_bold }}');
+            font-weight: bold;
+            font-style: normal;
+        }
+        {% if pdf_font_italic %}
+        @font-face {
+            font-family: 'PDFSerif';
+            src: url('{{ pdf_font_italic }}');
+            font-weight: normal;
+            font-style: italic;
+        }
+        {% endif %}
+        {% if pdf_font_bold_italic %}
+        @font-face {
+            font-family: 'PDFSerif';
+            src: url('{{ pdf_font_bold_italic }}');
+            font-weight: bold;
+            font-style: italic;
+        }
+        {% endif %}
+
+        @page {
+            size: legal; /* 8.5in x 14in */
+            margin: 0.3in 0.6in 0.7in 0.6in; /* Reduced top margin to minimize gaps */
+            
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'PDFSerif', 'Times New Roman', Times, serif;
+                font-size: 9pt;
+                color: #000;
+                margin-top: 0.2in;
+            }
+        }
+        
+        /* Remove top margin from first element on page */
+        @page :first {
+            margin-top: 0.5in; /* Keep normal top margin for first page */
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'PDFSerif', 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            line-height: 1.3;
+            color: #000;
+            background: #fff;
+        }
+        
+        .pdf-container {
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 0.35in;
+        }
+        
+        .header h1 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 0.08in;
+        }
+        
+        .header h2 {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 0.05in;
+        }
+        
+        .header h3 {
+            font-size: 10pt;
+            font-weight: normal;
+            margin-bottom: 0.05in;
+        }
+        
+        /* Section styling */
+        /* Tables flow consecutively one after another. A section/table is NOT
+           forced onto a single page; a long table may span pages (its header
+           repeats via thead display:table-header-group below). */
+        .section {
+            margin-top: 0;
+            margin-bottom: 0.12in;
+            orphans: 3;
+            widows: 3;
+        }
+        
+        /* Remove bottom margin from last section before signature */
+        .section:last-of-type {
+            margin-bottom: 0.05in;
+        }
+        
+        .section-title {
+            font-size: 10pt;
+            font-weight: bold;
+            margin-bottom: 0.05in;
+            margin-top: 0;
+            padding-top: 0;
+            page-break-after: avoid;
+        }
+        
+        /* Table styling - allow a long table to break across pages */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+            margin-top: 0;
+            table-layout: fixed;
+        }
+        
+        /* Repeat the header row on every page a table spans */
+        table thead {
+            background-color: #f0f0f0;
+            display: table-header-group;
+        }
+        
+        table tbody {
+            display: table-row-group;
+        }
+        
+        table tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
+        table th {
+            border: 1px solid #000;
+            padding: 5pt;
+            font-size: 9pt;
+            font-weight: bold;
+            text-align: center;
+            word-wrap: break-word;
+        }
+        
+        table td {
+            border: 1px solid #000;
+            padding: 5pt;
+            font-size: 9pt;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        
+        /* Signature section */
+        .signature {
+            margin-top: 0.5in;
+            text-align: left;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-before: avoid;
+        }
+        
+        .signature-space {
+            height: 0.4in;
+            margin-bottom: 0.05in;
+        }
+        
+        .signature-line {
+            margin-top: 0.3in;
+            page-break-inside: avoid;
+        }
+        
+        .signature-name {
+            font-weight: bold;
+            font-size: 10pt;
+            margin-bottom: 0.05in;
+        }
+        
+        .signature-title {
+            font-size: 9pt;
+            margin-top: 0.02in;
+        }
+    </style>
+</head>
+<body>
+    <div class="pdf-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>{{ tenant.display_with_university }}</h1>
+            <h2>{{ program }} {{ year }} {{ term }} Examination{% if batch %} ({{ batch }} Batch){% endif %}</h2>
+            <h3>(Session: {{ session }})</h3>
+            <h2>Statement of Remuneration</h2>
+        </div>
+        
+        <!-- Render sections dynamically with sequential numbering -->
+        {% for section in sections_list %}
+        <div class="section">
+            <div class="section-title">{{ section.number }}. {{ section.title }}</div>
+            <table>
+                <thead>
+                    <tr>
+                        {% if section.type == 'examination_committee' or section.type == 'moderation_committee' %}
+                            <th style="width: 40%;">Name</th>
+                            <th style="width: 35%;">Designation/Institute</th>
+                            <th style="width: 20%;">Position</th>
+                        {% elif section.type == 'question_preparation' %}
+                            <th>Course No.</th>
+                            <th>Section</th>
+                            <th>Name of Question Setter</th>
+                            <th>Designation/Institute</th>
+                            <th>No. of Questions</th>
+                        {% elif section.type == 'script_examination' %}
+                            <th>Course No.</th>
+                            <th>Section</th>
+                            <th>Name of Examiner</th>
+                            <th>Designation/Institute</th>
+                            <th>No. of Scripts</th>
+                        {% elif section.type == 'class_test' %}
+                            <th>Course No.</th>
+                            <th>Section</th>
+                            <th>Name of Course Teacher</th>
+                            <th>Designation/Institute</th>
+                            <th>No. of Class Tests</th>
+                            <th>No. of Students</th>
+                        {% elif section.type == 'sessional_assessment' or section.type == 'sessional_viva' %}
+                            <th>Course No.</th>
+                            <th>Name of the Teacher</th>
+                            <th>No. of Students</th>
+                        {% elif section.type == 'script_scrutiny' %}
+                            <th>Name of the Scrutinizer</th>
+                            <th>Designation/Institute</th>
+                            <th>No. of Scripts</th>
+                        {% elif section.type == 'tabulation' %}
+                            <th>Name of Tabulators</th>
+                            <th>Designation/Institute</th>
+                            <th>Course wise</th>
+                            <th>Student wise</th>
+                        {% elif section.type == 'coding_decoding' %}
+                            <th>Name</th>
+                            <th>Designation/Institute</th>
+                            <th>No. of Scripts</th>
+                        {% elif section.type == 'invigilation' %}
+                            <th>Name</th>
+                            <th>Designation/Institute</th>
+                            <th>Chief Invigilation</th>
+                            <th>Invigilation</th>
+                        {% elif section.type == 'thesis_supervision' %}
+                            <th>Name</th>
+                            <th>Designation/Institute</th>
+                            <th>Examine</th>
+                            <th>Supervision</th>
+                            <th>Co-Supervision</th>
+                            <th>Viva</th>
+                        {% elif section.type == 'viva' %}
+                            <th>Course Teacher</th>
+                            <th>Designation</th>
+                            <th>Institution</th>
+                            <th>No of Students</th>
+                        {% elif section.type == 'question_typing' or section.type == 'question_photocopy' %}
+                            <th>Name</th>
+                            <th>Designation/Institute</th>
+                            <th>Total No. of Question</th>
+                        {% elif section.type == 'official_support' %}
+                            <th>Name</th>
+                            <th>Designation/Institute</th>
+                            <th>Details</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in section.data %}
+                    <tr>
+                        {% if section.type == 'examination_committee' or section.type == 'moderation_committee' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.position }}</td>
+                        {% elif section.type == 'question_preparation' %}
+                            <td>{{ item.course_code }}</td>
+                            <td>{{ item.section or 'Full' }}</td>
+                            <td>{{ item.teacher }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.questions or '1' }}</td>
+                        {% elif section.type == 'script_examination' %}
+                            <td>{{ item.course_code }}</td>
+                            <td>{{ item.section or 'Full' }}</td>
+                            <td>{{ item.teacher }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.scripts or '0' }}</td>
+                        {% elif section.type == 'class_test' %}
+                            <td>{{ item.course_code }}</td>
+                            <td>{{ item.section or 'Full' }}</td>
+                            <td>{{ item.teacher }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.class_test or '0' }}</td>
+                            <td>{{ item.students or '0' }}</td>
+                        {% elif section.type == 'sessional_assessment' or section.type == 'sessional_viva' %}
+                            <td>{{ item.course_code }}</td>
+                            <td>{{ item.teacher }}</td>
+                            <td>{{ item.students or '0' }}</td>
+                        {% elif section.type == 'script_scrutiny' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.scripts or '0' }}</td>
+                        {% elif section.type == 'tabulation' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.course_wise or '0' }}</td>
+                            <td>{{ item.student_wise or '0' }}</td>
+                        {% elif section.type == 'coding_decoding' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.scripts or '0' }}</td>
+                        {% elif section.type == 'invigilation' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.chief or '-' }}</td>
+                            <td>{{ item.invigilation or '-' }}</td>
+                        {% elif section.type == 'thesis_supervision' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.examine or '-' }}</td>
+                            <td>{{ item.supervision or '-' }}</td>
+                            <td>{{ item.co_supervision or '-' }}</td>
+                            <td>{{ item.viva or '-' }}</td>
+                        {% elif section.type == 'viva' %}
+                            <td>{{ item.teacher }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.institution }}</td>
+                            <td>{{ item.students or '0' }}</td>
+                        {% elif section.type == 'question_typing' or section.type == 'question_photocopy' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.questions or '0' }}</td>
+                        {% elif section.type == 'official_support' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.designation }}</td>
+                            <td>{{ item.details or '-' }}</td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+        
+        <!-- Signature Section -->
+        <div class="signature">
+            <div class="signature-space"></div>
+            <div class="signature-line">
+                <div class="signature-name">{{ tenant.head_title }}</div>
+                <div class="signature-title">{{ tenant.name }}</div>
+                <div class="signature-title">{{ tenant.university_name }}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
